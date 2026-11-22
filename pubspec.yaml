@@ -1,0 +1,83 @@
+name: chow_genie
+description: "ChowGenie - Offline AI recipe genie & smart kitchen companion"
+publish_to: 'none'
+version: 2.0.0+1
+
+environment:
+  sdk: '>=3.4.3 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_gemma: ^0.16.1
+  image_picker: ^1.1.2
+  image: ^4.2.0
+  path_provider: ^2.1.4
+  path: ^1.9.0
+  shared_preferences: ^2.3.2
+  provider: ^6.1.2
+  uuid: ^4.5.1
+  intl: ^0.20.1
+  flutter_animate: ^4.5.2
+  shimmer: ^3.0.0
+  fl_chart: ^0.70.0
+  percent_indicator: ^4.2.4
+  flutter_markdown: ^0.7.5
+  http: ^1.2.2
+  flutter_dotenv: ^6.0.1
+  sqflite: ^2.4.2
+  share_plus: ^10.1.4
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^6.0.7
+  speech_to_text: ^7.0.3
+  flutter_tts: ^4.2.2
+  connectivity_plus: ^6.1.4
+  flutter_local_notifications: ^18.0.0
+  file_picker: ^8.1.7
+
+  # Firebase Ecosystem for #BuildHybridAI 2026
+  firebase_core: ^3.10.1
+  firebase_auth: ^5.4.1
+  cloud_firestore: ^5.6.2
+  firebase_remote_config: ^5.3.1
+  firebase_app_check: ^0.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.14.2
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  image_path_android: "assets/icons/chowgenie_app_icon.png"
+  image_path_ios: "assets/icons/chowgenie_app_icon.png"
+  adaptive_icon_background: "#0D0808"
+  adaptive_icon_foreground: "assets/icons/chowgenie_app_icon.png"
+  web:
+    generate: true
+    image_path: "assets/icons/chowgenie_app_icon.png"
+    background_color: "#0D0808"
+    theme_color: "#0D0808"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/fonts/
+    - assets/icons/
+    - assets/recipes.db
+    - .env
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Inter-ExtraBold.ttf
+          weight: 900
