@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_gemma/core/api/flutter_gemma.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'services/firebase_config_service.dart';
 import 'services/hybrid_ai_service.dart';
@@ -48,10 +47,6 @@ void main() async {
 
   // Initialize Firebase ecosystem (App Check, Remote Config, Auth) for #BuildHybridAI 2026
   await FirebaseConfigService.instance.initialize();
-
-  try {
-    FlutterGemma.initialize(maxDownloadRetries: 2);
-  } catch (_) {}
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     systemNavigationBarColor: Colors.transparent,
