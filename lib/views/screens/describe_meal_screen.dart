@@ -6,7 +6,7 @@ import '../../theme/app_text_styles.dart';
 import '../../viewmodels/describe_meal_view_model.dart';
 import '../../models/nutrition_info.dart';
 import '../widgets/nutrient_result_card.dart';
-import '../widgets/hybrid_ai_badge.dart';
+import '../../widgets/hybrid_ai_badge.dart';
 import '../../services/model_manager.dart';
 
 class DescribeMealScreen extends StatefulWidget {

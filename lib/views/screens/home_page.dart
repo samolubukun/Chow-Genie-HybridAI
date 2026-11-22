@@ -18,7 +18,7 @@ import 'chat_screen.dart';
 import '../../viewmodels/nutrition_view_model.dart';
 import '../../viewmodels/ingrediguard_view_model.dart';
 import '../widgets/wordmark.dart';
-import '../widgets/hybrid_ai_badge.dart';
+import '../../widgets/hybrid_ai_badge.dart';
 import '../../services/model_manager.dart';
 import '../../models/user_profile.dart';
 import '../../models/ingrediguard_result.dart';

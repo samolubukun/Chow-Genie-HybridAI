@@ -40,13 +40,6 @@ class MeshService extends ChangeNotifier {
     _localDisplayName = identity['displayName'];
   }
 
-  void _monitorAdapterState() {
-    _adapterStateSubscription = FlutterBluePlus.adapterState.listen((state) {
-      _adapterState = state;
-      notifyListeners();
-    });
-  }
-
   Future<void> setDisplayName(String name) async {
     await _db.setMeshDisplayName(name);
     _localDisplayName = name;
@@ -177,33 +170,12 @@ class MeshService extends ChangeNotifier {
     final peer = _discoveredPeers.firstWhere((p) => p.id == peerId);
     _connectedPeers.add(peer);
 
-    if (peer.connectionMethod == MeshConnectionMethod.ble) {
-      try {
-        final device = BluetoothDevice.fromId(peerId);
-        await device.connect();
-        device.connectionState.listen((state) {
-          if (state == BluetoothConnectionState.disconnected) {
-            _connectedPeers.removeWhere((p) => p.id == peerId);
-            notifyListeners();
-          }
-        });
-      } catch (e) {
-        debugPrint('BLE connect failed: $e');
-      }
-    }
-
     await _db.insertPeer(peer);
     notifyListeners();
   }
 
   Future<void> disconnectPeer(String peerId) async {
     _connectedPeers.removeWhere((p) => p.id == peerId);
-    if (_discoveredPeers.any((p) => p.id == peerId && p.connectionMethod == MeshConnectionMethod.ble)) {
-      try {
-        final device = BluetoothDevice.fromId(peerId);
-        await device.disconnect();
-      } catch (_) {}
-    }
     notifyListeners();
   }
 

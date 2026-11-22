@@ -9,7 +9,7 @@ import '../../theme/app_text_styles.dart';
 import '../../viewmodels/recipe_view_model.dart';
 import '../../viewmodels/pantry_view_model.dart';
 import '../../services/model_manager.dart';
-import '../widgets/hybrid_ai_badge.dart';
+import '../../widgets/hybrid_ai_badge.dart';
 
 import '../../services/local_db_service.dart';
 
