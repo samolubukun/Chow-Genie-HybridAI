@@ -69,7 +69,6 @@ flutter:
     - assets/fonts/
     - assets/icons/
     - assets/recipes.db
-    - .env
   fonts:
     - family: Inter
       fonts:
