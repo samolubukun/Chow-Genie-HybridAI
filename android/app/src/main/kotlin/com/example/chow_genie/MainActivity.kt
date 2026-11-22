@@ -19,10 +19,10 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.google.firebase.ai.ai
-import com.google.firebase.ai.GenerativeBackend
+import com.google.firebase.ai.type.GenerativeBackend
 import com.google.firebase.ai.GenerativeModel
-import com.google.firebase.ai.type.OnDeviceConfig
-import com.google.firebase.ai.type.InferenceMode
+import com.google.firebase.ai.OnDeviceConfig
+import com.google.firebase.ai.InferenceMode
 import com.google.firebase.ai.type.content
 
 class MainActivity: FlutterActivity() {
@@ -46,6 +46,7 @@ class MainActivity: FlutterActivity() {
         setupKotlinBridgeChannel(flutterEngine)
     }
 
+    @OptIn(com.google.firebase.ai.type.PublicPreviewAPI::class)
     private fun initializeFirebaseAndAiLogic() {
         try {
             if (FirebaseApp.getApps(this).isEmpty()) {
