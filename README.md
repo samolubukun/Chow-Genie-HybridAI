@@ -11,7 +11,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Firebase_AI_Logic-Hybrid_Inference-FFA000?style=for-the-badge&logo=firebase" alt="Firebase AI Logic" />
   <img src="https://img.shields.io/badge/Gemini_Nano-On--Device_AICore-4285F4?style=for-the-badge&logo=google-gemini" alt="Gemini Nano" />
-  <img src="https://img.shields.io/badge/Gemini_3.5_Flash-Cloud_Fallback-34A853?style=for-the-badge&logo=google" alt="Gemini Flash" />
+  <img src="https://img.shields.io/badge/Gemini_3.8_Flash-Cloud_Fallback-34A853?style=for-the-badge&logo=google" alt="Gemini Flash" />
   <img src="https://img.shields.io/badge/Flutter-3.24%2B-02569B?style=for-the-badge&logo=flutter" alt="Flutter" />
   <img src="https://img.shields.io/badge/Platform-Android%20%7C%20Web-3DDC84?style=for-the-badge&logo=android" alt="Android & Web" />
   <img src="https://img.shields.io/badge/IDE-Google_Antigravity-8E24AA?style=for-the-badge" alt="Google Antigravity" />
@@ -24,9 +24,15 @@
 
 ChowGenie Hybrid AI is built for Google's **#BuildHybridAI 2026** competition. It implements a multi-platform **Firebase AI Logic Hybrid Inference** engine combining:
 1. **⚡ On-Device Gemini Nano**: Sub-second, zero-cost, privacy-preserving AI running locally via Android AICore & Chrome Desktop Prompt API for instant pan-side cooking advice, offline ingredient swaps, and smart pantry inventory queries.
-2. **☁️ Cloud Gemini 3.5 Flash**: Dynamic cloud fallback for complex 7-day nutritional planning, heavy multimodal ingredient vision, and automated synchronization across Cloud Firestore.
-3. **🛡️ Firebase App Check & Security**: Gated via App Check (with Debug Provider tokens for judges) to ensure protected client execution.
+2. **☁️ Cloud Gemini 3.8 Flash**: Dynamic cloud fallback for complex 7-day nutritional planning, heavy multimodal ingredient vision, and automated synchronization across Cloud Firestore.
+3. **🛡️ Firebase App Check & Security**: Gated via App Check (with pre-seeded Debug Token `e4b3c2a1-5678-4901-abcd-ef0123456789` for judges) to ensure protected client execution.
 4. **🎛️ Firebase Remote Config & Auth**: Real-time prompt parameter tuning (`PREFER_ON_DEVICE`) and zero-friction anonymous authentication.
+
+> [!NOTE]
+> **For Hackathon Judges & Evaluators:**
+> In compliance with submission requirements (*"Firebase AI Logic requires App Check; debug tokens are accepted in submissions"*), the app automatically injects and registers the debug token:
+> `e4b3c2a1-5678-4901-abcd-ef0123456789`
+> Cloud fallback executes seamlessly on any test device or emulator out of the box.
 
 ---
 
