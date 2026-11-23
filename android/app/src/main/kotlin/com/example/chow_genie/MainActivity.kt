@@ -1,3 +1,5 @@
+@file:OptIn(com.google.firebase.ai.type.PublicPreviewAPI::class)
+
 package com.example.chow_genie
 
 import android.graphics.Bitmap
@@ -29,6 +31,7 @@ import com.google.firebase.ai.OnDeviceConfig
 import com.google.firebase.ai.InferenceMode
 import com.google.firebase.ai.type.content
 
+@OptIn(com.google.firebase.ai.type.PublicPreviewAPI::class)
 class MainActivity: FlutterActivity() {
     private val HYBRID_CHANNEL = "com.example.chow_genie/hybrid_ai"
     private val KOTLIN_CHANNEL = "com.example.chow_genie/kotlin_bridge"
@@ -143,6 +146,7 @@ class MainActivity: FlutterActivity() {
         }
     }
 
+    @OptIn(com.google.firebase.ai.type.PublicPreviewAPI::class)
     private fun setupHybridAiChannel(flutterEngine: FlutterEngine) {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, HYBRID_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
