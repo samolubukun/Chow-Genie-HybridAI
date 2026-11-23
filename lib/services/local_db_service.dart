@@ -39,7 +39,22 @@ class LocalDbService {
     final path = join(dir.path, 'chowgenie.db');
     
     final exists = await File(path).exists();
-    if (!exists) {
+    bool shouldCopy = !exists;
+    if (exists) {
+      try {
+        final tempDb = await openDatabase(path, readOnly: true);
+        final countResult = await tempDb.rawQuery('SELECT count(*) as count FROM recipes');
+        final count = Sqflite.firstIntValue(countResult) ?? 0;
+        await tempDb.close();
+        if (count == 0) {
+          shouldCopy = true;
+        }
+      } catch (_) {
+        shouldCopy = true;
+      }
+    }
+
+    if (shouldCopy) {
       try {
         await Directory(dirname(path)).create(recursive: true);
       } catch (_) {}
