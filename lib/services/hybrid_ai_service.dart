@@ -142,22 +142,6 @@ class HybridAiService {
   }
 
   String _buildSimulatedRecipeResponse(String prompt) {
-    return '''# ChowGenie Chef Recipe
-
-**Cooking Time:** 25 mins | **Prep Time:** 10 mins | **Servings:** 2-3
-
-### Ingredients:
-- 2 cups primary ingredients (adjusted for recipe)
-- 1 tbsp olive oil or healthy cooking oil
-- Salt, cracked black pepper, and herbs to taste
-- Fresh greens or aromatics (garlic, onion, or ginger)
-
-### Step-by-Step Instructions:
-1. **Prep & Season:** Wash and chop your vegetables and proteins evenly for uniform cooking.
-2. **Heat & Sauté:** Heat olive oil in a skillet over medium heat. Sauté aromatics until fragrant (approx. 2 minutes).
-3. **Combine & Simmer:** Add remaining ingredients, season generously, and simmer until tender and fully cooked.
-4. **Plate & Serve:** Garnish with fresh herbs and serve immediately while warm.
-
-*Nutritional Note: Formulated dynamically by ChowGenie Hybrid AI with balanced macronutrients.*''';
+    return "You are currently offline. On-device Gemini Nano requires an AICore-supported device (such as Google Pixel 8/9 or Samsung Galaxy S24). Please connect to the internet to use Cloud Gemini Flash, or explore the 73,000+ recipes available in your offline library.";
   }
 }
