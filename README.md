@@ -42,14 +42,13 @@ In accordance with official hackathon rules for existing projects, the table bel
 
 | Capability | Prior Version | #BuildHybridAI 2026 Upgrade |
 | :--- | :--- | :--- |
-| **AI Inference** | Heavy local model (~2.7GB Hugging Face download block) | **Firebase AI Logic Hybrid SDK** (Gemini Nano local + Gemini 3.5 Flash Cloud fallback) |
+| **AI Inference** | Heavy local model (~2.7GB Hugging Face download block) | **Firebase AI Logic Hybrid SDK** (Gemini Nano local + Gemini 3.8 Flash Cloud cascade) |
 | **Android Integration** | Basic Flutter activity | **Native Kotlin Bridge** (`MainActivity.kt`) importing `com.google.firebase:firebase-ai` & `firebase-ai-ondevice` |
 | **Web Platform** | Desktop/mobile only | **Multi-Platform Web Support** (Chrome Desktop Gemini Nano Prompt API interop) |
 | **Security Gate** | None | **Firebase App Check** (`DebugAppCheckProviderFactory` configured) |
 | **Prompt Tuning** | Hardcoded strings | **Firebase Remote Config** (dynamic `ai_routing_mode` & prompt templates) |
-| **Cloud Persistence** | Local SQLite only | **Cloud Firestore** sync for recipes, pantry items, and user meal plans |
-| **Authentication** | Device-bound | **Firebase Auth** (Instant Anonymous sign-in for seamless onboarding) |
-| **Pantry Intake** | Manual typing only | **Receipt Scanner $\rightarrow$ Auto-Pantry** (Multimodal Gemini 3.5 Flash auto-extracting items & shelf-life) |
+| **Offline Library** | Remote API dependency | **Instant Tier-3 SQLite Fallback** (73,322 offline recipes with zero-latency local fallback) |
+| **Pantry Intake** | Manual typing only | **Receipt Scanner $\rightarrow$ Auto-Pantry** (Multimodal Gemini 3.8 Flash auto-extracting items & shelf-life) |
 | **Recipe Adaptation** | Static recipes | **One-Tap Recipe Transforms & Scaler** (Gemini Nano on-device: Vegan, High-Protein, Budget + dynamic scaler) |
 | **Cooking Guidance** | Static step text | **Embedded Smart Cooking Timers** (Regex duration detection, circular countdown ring, audio-haptic alerts) |
 | **Grocery Planning** | Manual list entry | **Smart Missing-Item Grocery Sync** (Cross-checks 7-day meal plan against active pantry stock) |
@@ -76,14 +75,12 @@ flowchart TD
         FirebaseAI --> RoutingPolicy{"InferenceMode.PREFER_ON_DEVICE"}
         
         RoutingPolicy -->|AICore Compatible| LocalNano["⚡ On-Device Gemini Nano (<200ms)"]
-        RoutingPolicy -->|Unsupported / Cloud Fallback| CloudFlash["☁️ Cloud Gemini 3.5 Flash Fallback"]
+        RoutingPolicy -->|Unsupported / Cloud Fallback| CloudFlash["☁️ Cloud Gemini 3.8 Flash Fallback Cascade"]
     end
 
     subgraph FirebaseSecurity["Firebase Cloud Ecosystem"]
         AppCheck["Firebase App Check (Debug Token Gate)"] -.-> CloudFlash
         RemoteConfig["Firebase Remote Config (Dynamic Rules)"] -.-> KotlinBridge
-        Firestore["Cloud Firestore (Recipe & Pantry Sync)"] <--> UI
-        Auth["Firebase Auth (Anonymous Sign-In)"] --> Firestore
     end
 
     LocalNano --> ResultReturn[Result Map + Latency Measurement]
@@ -104,12 +101,12 @@ flowchart TD
 | **Voice Hands-Free Cooking** | ⚡ On-Device | `<300ms` | Device-native Speech-to-Text with local Nano step progression. |
 | **One-Tap Recipe Transforms** | ⚡ On-Device | `<250ms` | Instant dietary adaptation (Vegan, High-Protein, Budget) on Gemini Nano. |
 | **Smart Cooking Timers** | ⚡ On-Device | Instant | In-app countdown ring, duration presets, and audio-haptic alerts without internet. |
-| **Receipt Scanner $\rightarrow$ Auto-Pantry** | ☁️ Cloud Fallback | ~950ms | Dense multimodal OCR and shelf-life prediction using Gemini 3.5 Flash. |
+| **Receipt Scanner $\rightarrow$ Auto-Pantry** | ☁️ Cloud Fallback | ~950ms | Dense multimodal OCR and shelf-life prediction using Gemini 3.8 Flash. |
 | **Meal Plan Grocery Cross-Check** | ⚡ On-Device | Instant | Local SQLite cross-referencing between scheduled meals and pantry stock. |
 | **7-Day Meal Plan Optimization** | ☁️ Cloud Fallback | ~800ms | Multi-parameter reasoning across 21 meals, calories, and macros. |
 | **Packaging Safety Scanner** | ☁️ Cloud Fallback | ~900ms | High-resolution multimodal analysis of complex ingredient warning labels. |
 | **Peer-to-Peer Recipe Mesh** | ⚡ On-Device | Instant | Direct local Wi-Fi / Hotspot UDP multicast recipe card sharing. |
-| **Cross-Device Cloud Sync** | ☁️ Cloud | Background | Cloud Firestore persistence for saved recipes and diet profiles. |
+| **Offline Library Fallback** | ⚡ On-Device | Instant | 73,322 SQLite recipes provide instant answers when offline or under high quota load. |
 
 ---
 
