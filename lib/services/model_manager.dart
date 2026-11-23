@@ -31,9 +31,11 @@ class ModelManager extends ChangeNotifier {
   // Firebase AI Logic Hybrid Inference State (#BuildHybridAI 2026)
   String _latestExecutionMode = 'on_device_gemini_nano';
   int _latestLatencyMs = 95;
+  String _latestModelName = 'Gemini 3.8 Flash';
 
   String get latestExecutionMode => _latestExecutionMode;
   int get latestLatencyMs => _latestLatencyMs;
+  String get latestModelName => _latestModelName;
   bool get isLatestOnDevice =>
       _latestExecutionMode.contains('on_device') ||
       _latestExecutionMode.contains('nano');
@@ -59,6 +61,7 @@ class ModelManager extends ChangeNotifier {
       final hybridResult = await HybridAiService.instance.generateContent(prompt: prompt);
       _latestExecutionMode = hybridResult.executionMode;
       _latestLatencyMs = hybridResult.latencyMs;
+      _latestModelName = hybridResult.model;
       notifyListeners();
       return hybridResult.text;
     } catch (e) {
@@ -82,6 +85,7 @@ class ModelManager extends ChangeNotifier {
       );
       _latestExecutionMode = hybridResult.executionMode;
       _latestLatencyMs = hybridResult.latencyMs;
+      _latestModelName = hybridResult.model;
       notifyListeners();
       return hybridResult.text;
     } catch (e) {

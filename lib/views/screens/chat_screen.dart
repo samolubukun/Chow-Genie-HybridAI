@@ -435,7 +435,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           Consumer<ModelManager>(
                             builder: (_, mm, __) => HybridAiBadge(
                               isOnDevice: mm.isLatestOnDevice,
-                              latencyMs: mm.latestLatencyMs,
+                              modelName: mm.latestModelName,
                             ),
                           ),
                         ],

@@ -170,68 +170,90 @@ class MainActivity: FlutterActivity() {
                     val startTime = System.currentTimeMillis()
 
                     CoroutineScope(Dispatchers.Main).launch {
+                        // Smart Multi-Model Resilience Cascade across verified Gemini 3 Flash generation:
+                        // Primary: gemini-3.8-flash (flagship workhorse)
+                        // Fast Fallback: gemini-3.5-flash-lite (high throughput, separate quota bucket, ultra-fast)
+                        // Secondary Fallbacks: gemini-3.6-flash, gemini-3.5-flash
+                        val candidateModels = listOf(
+                            "gemini-3.8-flash",
+                            "gemini-3.5-flash-lite",
+                            "gemini-3.6-flash",
+                            "gemini-3.5-flash"
+                        )
+
                         var generatedText: String? = null
+                        var successfulModel = "gemini-3.8-flash"
                         var lastError: Exception? = null
 
-                        try {
-                            val model = Firebase.ai(backend = GenerativeBackend.googleAI())
-                                .generativeModel(
-                                    modelName = "gemini-3.8-flash",
-                                    onDeviceConfig = OnDeviceConfig(mode = InferenceMode.PREFER_ON_DEVICE)
-                                )
+                        for (modelName in candidateModels) {
+                            try {
+                                val currentModel = Firebase.ai(backend = GenerativeBackend.googleAI())
+                                    .generativeModel(
+                                        modelName = modelName,
+                                        onDeviceConfig = OnDeviceConfig(mode = InferenceMode.PREFER_ON_DEVICE)
+                                    )
 
-                            val text = withContext(Dispatchers.IO) {
-                                if (imageBase64 != null && imageBase64.isNotEmpty()) {
-                                    val imageBytes = Base64.decode(imageBase64, Base64.DEFAULT)
-                                    val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                                    BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, boundsOptions)
-                                    var inSample = 1
-                                    while (boundsOptions.outWidth / inSample > 1024 || boundsOptions.outHeight / inSample > 1024) {
-                                        inSample *= 2
-                                    }
-                                    val decodeOptions = BitmapFactory.Options().apply { inSampleSize = inSample }
-                                    val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, decodeOptions)
-                                    val inputContent = content {
-                                        image(bitmap)
-                                        text(prompt)
-                                    }
-                                    try {
-                                        model.generateContent(inputContent).text
-                                    } catch (e: Exception) {
-                                        if (e.message?.contains("deadline", ignoreCase = true) == true) {
-                                            model.generateContent(inputContent).text
-                                        } else throw e
-                                    }
-                                } else {
-                                    try {
-                                        model.generateContent(prompt).text
-                                    } catch (e: Exception) {
-                                        if (e.message?.contains("deadline", ignoreCase = true) == true) {
-                                            model.generateContent(prompt).text
-                                        } else throw e
+                                val text = withContext(Dispatchers.IO) {
+                                    if (imageBase64 != null && imageBase64.isNotEmpty()) {
+                                        val imageBytes = Base64.decode(imageBase64, Base64.DEFAULT)
+                                        val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                                        BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, boundsOptions)
+                                        var inSample = 1
+                                        while (boundsOptions.outWidth / inSample > 1024 || boundsOptions.outHeight / inSample > 1024) {
+                                            inSample *= 2
+                                        }
+                                        val decodeOptions = BitmapFactory.Options().apply { inSampleSize = inSample }
+                                        val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, decodeOptions)
+                                        val inputContent = content {
+                                            image(bitmap)
+                                            text(prompt)
+                                        }
+                                        currentModel.generateContent(inputContent).text
+                                    } else {
+                                        currentModel.generateContent(prompt).text
                                     }
                                 }
-                            }
 
-                            if (text != null && text.isNotEmpty()) {
-                                generatedText = text
+                                if (text != null && text.isNotEmpty()) {
+                                    generatedText = text
+                                    successfulModel = modelName
+                                    break
+                                }
+                            } catch (e: Exception) {
+                                lastError = e
+                                val msg = e.localizedMessage ?: e.message ?: ""
+                                android.util.Log.w("MainActivity", "Model $modelName attempt failed: $msg")
+                                val isOffline = e is java.net.UnknownHostException || 
+                                               e is java.net.ConnectException || 
+                                               e is java.net.SocketTimeoutException ||
+                                               msg.contains("network", ignoreCase = true) || 
+                                               msg.contains("Unable to resolve host", ignoreCase = true) ||
+                                               msg.contains("Failed to connect", ignoreCase = true)
+                                // Stop cascade only if completely offline or token issue; on 429/quota/503/demand, cascade to next model!
+                                if (isOffline || msg.contains("AppCheck", ignoreCase = true) || msg.contains("token is invalid", ignoreCase = true)) {
+                                    break
+                                }
                             }
-                        } catch (e: Exception) {
-                            lastError = e
-                            android.util.Log.w("MainActivity", "Inference attempt failed: ${e.message}")
                         }
 
                         val latencyMs = System.currentTimeMillis() - startTime
 
                         if (generatedText != null) {
                             val executionSource = if (latencyMs < 600) "on_device_gemini_nano" else "cloud_gemini_fallback"
+                            val friendlyName = when (successfulModel) {
+                                "gemini-3.8-flash" -> "Gemini 3.8 Flash"
+                                "gemini-3.5-flash-lite" -> "Gemini 3.5 Flash-Lite"
+                                "gemini-3.6-flash" -> "Gemini 3.6 Flash"
+                                "gemini-3.5-flash" -> "Gemini 3.5 Flash"
+                                else -> successfulModel
+                            }
                             result.success(
                                 mapOf(
                                     "status" to "success",
                                     "text" to generatedText,
                                     "executionMode" to executionSource,
                                     "latencyMs" to latencyMs,
-                                    "model" to "Gemini 3.8 Flash"
+                                    "model" to friendlyName
                                 )
                             )
                         } else {
@@ -248,8 +270,8 @@ class MainActivity: FlutterActivity() {
                                 "You are currently offline. On-device Gemini Nano requires an AICore-supported device (such as Google Pixel 8/9 or Samsung Galaxy S24). Please connect to the internet to use Cloud Gemini Flash, or explore the 73,000+ recipes available in your offline library."
                             } else if (errorMsg.contains("AppCheck", ignoreCase = true) || errorMsg.contains("token", ignoreCase = true)) {
                                 "Firebase App Check token validation pending.\n\nYour active device debug token is:\n`$activeToken`\n\nEnsure this token is added in Firebase Console > App Check > Apps > com.example.chow_genie (⋮) > Manage debug tokens."
-                            } else if (errorMsg.contains("high demand", ignoreCase = true) || errorMsg.contains("spike", ignoreCase = true) || errorMsg.contains("503", ignoreCase = true)) {
-                                "Google Gemini models are currently experiencing temporary high regional demand. Please try your prompt again in a moment, or explore the 73,000+ recipes in your offline library."
+                            } else if (errorMsg.contains("high demand", ignoreCase = true) || errorMsg.contains("spike", ignoreCase = true) || errorMsg.contains("503", ignoreCase = true) || errorMsg.contains("quota", ignoreCase = true) || errorMsg.contains("limit", ignoreCase = true) || errorMsg.contains("429", ignoreCase = true)) {
+                                "Google Gemini models are currently experiencing temporary high demand or rate limits. Please try your prompt again in a moment, or explore the 73,000+ recipes in your offline library."
                             } else {
                                 "ChowGenie Hybrid AI: $errorMsg"
                             }
