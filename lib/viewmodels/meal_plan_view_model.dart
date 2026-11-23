@@ -285,7 +285,8 @@ Do not write markdown code fences or extra text, just raw JSON.
           ingredients: ingredients,
           directions: directions,
           calories: calories,
-          source: RecipeSource.generated,
+          source: 'AI Suggestion',
+          isUserGenerated: true,
           createdAt: DateTime.now(),
         );
         await _db.insertRecipe(recipe);
