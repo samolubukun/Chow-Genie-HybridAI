@@ -537,6 +537,7 @@ class _AskGenieScreenState extends State<AskGenieScreen> {
                 Consumer<ModelManager>(
                   builder: (_, mm, __) => HybridAiBadge(
                     isOnDevice: mm.isLatestOnDevice,
+                    isOffline: mm.isLatestOffline,
                   ),
                 ),
                 const SizedBox(width: 8),

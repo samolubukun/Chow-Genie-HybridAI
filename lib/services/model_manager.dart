@@ -37,7 +37,13 @@ class ModelManager extends ChangeNotifier {
   bool get isLatestOnDevice =>
       _latestExecutionMode.contains('on_device') ||
       _latestExecutionMode.contains('nano');
+  bool get isLatestOffline => _latestExecutionMode.contains('offline');
   bool get isHybridAiActive => true;
+
+  void setExecutionMode(String mode) {
+    _latestExecutionMode = mode;
+    notifyListeners();
+  }
 
   ModelManager();
 

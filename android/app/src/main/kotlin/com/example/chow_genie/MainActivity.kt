@@ -170,15 +170,15 @@ class MainActivity: FlutterActivity() {
                     val startTime = System.currentTimeMillis()
 
                     CoroutineScope(Dispatchers.Main).launch {
-                        // Multi-model resilience cascade: Flash-Lite (fastest, lowest load) -> 3.8 Flash -> 3.5 Flash
+                        // Multi-model resilience cascade: Primary 3.8 Flash (first) -> 2.5 Flash -> 2.0 Flash
                         val candidateModels = listOf(
-                            "gemini-3.5-flash-lite",
                             "gemini-3.8-flash",
-                            "gemini-3.5-flash"
+                            "gemini-2.5-flash",
+                            "gemini-2.0-flash"
                         )
 
                         var generatedText: String? = null
-                        var successfulModel = "gemini-3.5-flash-lite"
+                        var successfulModel = "gemini-3.8-flash"
                         var lastError: Exception? = null
 
                         for (modelName in candidateModels) {
@@ -192,7 +192,14 @@ class MainActivity: FlutterActivity() {
                                 val text = withContext(Dispatchers.IO) {
                                     if (imageBase64 != null && imageBase64.isNotEmpty()) {
                                         val imageBytes = Base64.decode(imageBase64, Base64.DEFAULT)
-                                        val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                                        val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                                        BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, boundsOptions)
+                                        var inSample = 1
+                                        while (boundsOptions.outWidth / inSample > 1024 || boundsOptions.outHeight / inSample > 1024) {
+                                            inSample *= 2
+                                        }
+                                        val decodeOptions = BitmapFactory.Options().apply { inSampleSize = inSample }
+                                        val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, decodeOptions)
                                         val inputContent = content {
                                             image(bitmap)
                                             text(prompt)
@@ -229,9 +236,9 @@ class MainActivity: FlutterActivity() {
                         if (generatedText != null) {
                             val executionSource = if (latencyMs < 600) "on_device_gemini_nano" else "cloud_gemini_fallback"
                             val friendlyName = when (successfulModel) {
-                                "gemini-3.5-flash-lite" -> "Gemini 3.5 Flash-Lite"
                                 "gemini-3.8-flash" -> "Gemini 3.8 Flash"
-                                "gemini-3.5-flash" -> "Gemini 3.5 Flash"
+                                "gemini-2.5-flash" -> "Gemini 2.5 Flash"
+                                "gemini-2.0-flash" -> "Gemini 2.0 Flash"
                                 else -> successfulModel
                             }
                             result.success(
