@@ -178,12 +178,26 @@ class MainActivity: FlutterActivity() {
                                             image(bitmap)
                                             text(prompt)
                                         }
-                                        val response = model.generateContent(inputContent)
-                                        response.text ?: "No response generated"
+                                        try {
+                                            val response = model.generateContent(inputContent)
+                                            response.text ?: "No response generated"
+                                        } catch (e: Exception) {
+                                            if (e.message?.contains("deadline", ignoreCase = true) == true) {
+                                                val retry = model.generateContent(inputContent)
+                                                retry.text ?: "No response generated"
+                                            } else throw e
+                                        }
                                     } else {
-                                        // Text Prompt
-                                        val response = model.generateContent(prompt)
-                                        response.text ?: "No response generated"
+                                        // Text Prompt with automatic retry on cold-start deadline timeout
+                                        try {
+                                            val response = model.generateContent(prompt)
+                                            response.text ?: "No response generated"
+                                        } catch (e: Exception) {
+                                            if (e.message?.contains("deadline", ignoreCase = true) == true) {
+                                                val retry = model.generateContent(prompt)
+                                                retry.text ?: "No response generated"
+                                            } else throw e
+                                        }
                                     }
                                 }
 
