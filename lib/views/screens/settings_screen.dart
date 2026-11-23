@@ -81,58 +81,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               _sectionHeader(colors, 'AI Engine'),
               const SizedBox(height: 12),
-              Consumer<ModelManager>(
-                builder: (context, mm, _) => _menuItem(context, colors,
-                  icon: Icons.psychology,
-                  label: 'Firebase Hybrid AI',
-                  trailing: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.success.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '⚡ Gemini Nano + Cloud',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.success),
-                    ),
-                  ),
-                  onTap: () {
-                    showModalBottomSheet(
-                      context: context,
-                      backgroundColor: colors.card,
-                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                      builder: (ctx) => Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Firebase AI Logic Hybrid Inference', style: AppTextStyles.heading2),
-                            const SizedBox(height: 12),
-                            Text('• On-Device Engine: Gemini Nano (AICore local execution)', style: AppTextStyles.bodyMedium),
-                            const SizedBox(height: 6),
-                            Text('• Cloud Fallback: Gemini 3.5 Flash', style: AppTextStyles.bodyMedium),
-                            const SizedBox(height: 6),
-                            Text('• App Check Security: Active (Debug Provider)', style: AppTextStyles.bodyMedium),
-                            const SizedBox(height: 6),
-                            Text('• Remote Config: Connected (PREFER_ON_DEVICE)', style: AppTextStyles.bodyMedium),
-                            const SizedBox(height: 6),
-                            Text('• Cloud Firestore: Auto-syncing recipes', style: AppTextStyles.bodyMedium),
-                            const SizedBox(height: 20),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () => Navigator.pop(ctx),
-                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand),
-                                child: const Text('Close'),
-                              ),
+              _menuItem(context, colors,
+                icon: Icons.psychology,
+                label: 'Firebase Hybrid AI',
+                onTap: () {
+                  showModalBottomSheet(
+                    context: context,
+                    backgroundColor: colors.card,
+                    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                    builder: (ctx) => Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Firebase AI Logic Hybrid Inference', style: AppTextStyles.heading2),
+                          const SizedBox(height: 12),
+                          Text('• On-Device Engine: Gemini Nano (AICore local execution)', style: AppTextStyles.bodyMedium),
+                          const SizedBox(height: 6),
+                          Text('• Cloud Fallback: Gemini 3.5 Flash', style: AppTextStyles.bodyMedium),
+                          const SizedBox(height: 6),
+                          Text('• App Check Security: Active (Debug Provider)', style: AppTextStyles.bodyMedium),
+                          const SizedBox(height: 6),
+                          Text('• Remote Config: Connected (PREFER_ON_DEVICE)', style: AppTextStyles.bodyMedium),
+                          const SizedBox(height: 6),
+                          Text('• Cloud Firestore: Auto-syncing recipes', style: AppTextStyles.bodyMedium),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand),
+                              child: const Text('Close'),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 28),
 
