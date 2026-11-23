@@ -683,7 +683,12 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       ),
                       SizedBox(width: 10),
-                      Text('Generating meal suggestion via Hybrid AI...'),
+                      Expanded(
+                        child: Text(
+                          'Generating meal suggestion via Hybrid AI...',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                   duration: const Duration(seconds: 4),

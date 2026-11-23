@@ -250,11 +250,12 @@ class MealPlanViewModel extends ChangeNotifier {
           : '';
 
       final prompt = '''
-Suggest a single healthy, delicious recipe for $typeName.
+You are an expert master chef. Create an inspiring, delicious, and healthy new culinary recipe for $typeName.
 $dietPrefs $calGoal
-Return ONLY valid JSON with this exact structure:
+Generate a completely original dish with fresh ingredients and step-by-step cooking directions.
+Return ONLY valid raw JSON with this exact structure:
 {
-  "title": "Recipe Title",
+  "title": "Creative Dish Name",
   "calories": 450,
   "ingredients": ["1 cup ingredient", "2 tbsp ingredient"],
   "directions": ["Step 1 instructions", "Step 2 instructions"]
