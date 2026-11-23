@@ -63,7 +63,7 @@ class MainActivity: FlutterActivity() {
             // Initialize Firebase AI Logic with Hybrid Inference (PREFER_ON_DEVICE routes to Gemini Nano first, falling back to Cloud Gemini)
             generativeModel = Firebase.ai(backend = GenerativeBackend.googleAI())
                 .generativeModel(
-                    modelName = "gemini-3.5-flash-lite",
+                    modelName = "gemini-2.5-flash",
                     onDeviceConfig = OnDeviceConfig(
                         mode = InferenceMode.PREFER_ON_DEVICE
                     )
@@ -92,7 +92,7 @@ class MainActivity: FlutterActivity() {
                         "isFirebaseInitialized" to isFirebaseInitialized,
                         "isModelWarmedUp" to isModelWarmedUp,
                         "routingMode" to "PREFER_ON_DEVICE",
-                        "cloudFallbackModel" to "gemini-3.5-flash-lite",
+                        "cloudFallbackModel" to "gemini-2.5-flash",
                         "onDeviceEngine" to "Gemini Nano (AICore)",
                         "androidSdkVersion" to Build.VERSION.SDK_INT,
                         "deviceManufacturer" to Build.MANUFACTURER,
@@ -155,15 +155,30 @@ class MainActivity: FlutterActivity() {
                                 )
                             }
                         } catch (e: Exception) {
+                            android.util.Log.e("MainActivity", "Firebase AI execution failed", e)
                             val latencyMs = System.currentTimeMillis() - startTime
-                            val fallbackResponse = "You are currently offline. On-device Gemini Nano requires an AICore-supported device (such as Google Pixel 8/9 or Samsung Galaxy S24). Please connect to the internet to use Cloud Gemini Flash, or explore the 73,000+ recipes available in your offline library."
+                            val errorMsg = e.localizedMessage ?: e.message ?: "Unknown error"
+                            
+                            val isOffline = e is java.net.UnknownHostException || 
+                                           e is java.net.ConnectException || 
+                                           e is java.net.SocketTimeoutException ||
+                                           errorMsg.contains("network", ignoreCase = true) || 
+                                           errorMsg.contains("Unable to resolve host", ignoreCase = true) ||
+                                           errorMsg.contains("Failed to connect", ignoreCase = true)
+
+                            val responseText = if (isOffline) {
+                                "You are currently offline. On-device Gemini Nano requires an AICore-supported device (such as Google Pixel 8/9 or Samsung Galaxy S24). Please connect to the internet to use Cloud Gemini Flash, or explore the 73,000+ recipes available in your offline library."
+                            } else {
+                                "ChowGenie Hybrid AI: $errorMsg"
+                            }
+
                             result.success(
                                 mapOf(
                                     "status" to "success",
-                                    "text" to fallbackResponse,
+                                    "text" to responseText,
                                     "executionMode" to "cloud_gemini_fallback",
                                     "latencyMs" to latencyMs,
-                                    "model" to "Firebase AI Logic (Cloud Fallback Offline)"
+                                    "model" to "Firebase AI Logic (Cloud Gemini Flash)"
                                 )
                             )
                         }
