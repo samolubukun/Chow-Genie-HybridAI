@@ -13,6 +13,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+import android.content.Context
+import java.io.File
+import com.google.firebase.FirebaseOptions
+
 // Firebase & Firebase AI Logic (Hybrid Inference Engine)
 import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
@@ -28,6 +32,7 @@ import com.google.firebase.ai.type.content
 class MainActivity: FlutterActivity() {
     private val HYBRID_CHANNEL = "com.example.chow_genie/hybrid_ai"
     private val KOTLIN_CHANNEL = "com.example.chow_genie/kotlin_bridge"
+    private val STATIC_DEBUG_TOKEN = "e4b3c2a1-5678-4901-abcd-ef0123456789"
 
     private var generativeModel: GenerativeModel? = null
     private var isFirebaseInitialized = false
@@ -46,9 +51,63 @@ class MainActivity: FlutterActivity() {
         setupKotlinBridgeChannel(flutterEngine)
     }
 
+    private fun preseedAppCheckDebugToken() {
+        try {
+            // 1. Write to SharedPreferences using FirebaseOptions persistence key
+            try {
+                val options = FirebaseOptions.fromResource(this)
+                if (options != null) {
+                    val persistenceKey = FirebaseApp.getPersistenceKey(FirebaseApp.DEFAULT_APP_NAME, options)
+                    val prefsName = "com.google.firebase.appcheck.debug.store.$persistenceKey"
+                    getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                        .edit()
+                        .putString("com.google.firebase.appcheck.debug.DEBUG_SECRET", STATIC_DEBUG_TOKEN)
+                        .commit()
+                }
+            } catch (_: Exception) {}
+
+            // 2. Also write to any existing store in shared_prefs directory
+            val sharedPrefsDir = File(applicationInfo.dataDir, "shared_prefs")
+            if (sharedPrefsDir.exists() && sharedPrefsDir.isDirectory) {
+                val files = sharedPrefsDir.listFiles { _, name -> name.startsWith("com.google.firebase.appcheck.debug.store") }
+                if (files != null) {
+                    for (file in files) {
+                        val prefName = file.name.removeSuffix(".xml")
+                        getSharedPreferences(prefName, Context.MODE_PRIVATE)
+                            .edit()
+                            .putString("com.google.firebase.appcheck.debug.DEBUG_SECRET", STATIC_DEBUG_TOKEN)
+                            .commit()
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
+    private fun getActiveDebugToken(): String {
+        try {
+            val sharedPrefsDir = File(applicationInfo.dataDir, "shared_prefs")
+            if (sharedPrefsDir.exists() && sharedPrefsDir.isDirectory) {
+                val files = sharedPrefsDir.listFiles { _, name -> name.startsWith("com.google.firebase.appcheck.debug.store") }
+                if (files != null) {
+                    for (file in files) {
+                        val prefName = file.name.removeSuffix(".xml")
+                        val sp = getSharedPreferences(prefName, Context.MODE_PRIVATE)
+                        val token = sp.getString("com.google.firebase.appcheck.debug.DEBUG_SECRET", null)
+                        if (!token.isNullOrEmpty()) {
+                            return token
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+        return STATIC_DEBUG_TOKEN
+    }
+
     @OptIn(com.google.firebase.ai.type.PublicPreviewAPI::class)
     private fun initializeFirebaseAndAiLogic() {
         try {
+            preseedAppCheckDebugToken()
+
             if (FirebaseApp.getApps(this).isEmpty()) {
                 FirebaseApp.initializeApp(this)
             }
@@ -166,8 +225,11 @@ class MainActivity: FlutterActivity() {
                                            errorMsg.contains("Unable to resolve host", ignoreCase = true) ||
                                            errorMsg.contains("Failed to connect", ignoreCase = true)
 
+                            val activeToken = getActiveDebugToken()
                             val responseText = if (isOffline) {
                                 "You are currently offline. On-device Gemini Nano requires an AICore-supported device (such as Google Pixel 8/9 or Samsung Galaxy S24). Please connect to the internet to use Cloud Gemini Flash, or explore the 73,000+ recipes available in your offline library."
+                            } else if (errorMsg.contains("AppCheck", ignoreCase = true) || errorMsg.contains("token", ignoreCase = true)) {
+                                "Firebase App Check token validation pending.\n\nYour active device debug token is:\n`$activeToken`\n\nEnsure this token is added in Firebase Console > App Check > Apps > com.example.chow_genie (⋮) > Manage debug tokens."
                             } else {
                                 "ChowGenie Hybrid AI: $errorMsg"
                             }
