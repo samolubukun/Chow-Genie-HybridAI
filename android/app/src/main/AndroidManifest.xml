@@ -32,6 +32,10 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <meta-data
+            android:name="firebaseAppCheckDebugSecret"
+            android:value="e4b3c2a1-5678-4901-abcd-ef0123456789" />
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

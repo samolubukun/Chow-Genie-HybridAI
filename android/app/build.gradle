@@ -35,6 +35,9 @@ android {
         targetSdk = 36
         versionCode = flutterVersionCode.toInteger()
         versionName = flutterVersionName
+        manifestPlaceholders += [
+            firebaseAppCheckDebugSecret: "e4b3c2a1-5678-4901-abcd-ef0123456789"
+        ]
     }
 
     buildTypes {
