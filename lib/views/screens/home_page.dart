@@ -104,17 +104,6 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         actions: [
-          Consumer<ModelManager>(
-            builder: (context, mm, _) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: HybridAiBadge(
-                  isOnDevice: mm.isLatestOnDevice,
-                  latencyMs: mm.latestLatencyMs,
-                ),
-              );
-            },
-          ),
           IconButton(
             icon: Icon(Icons.settings_outlined, color: colors.textPrimary),
             onPressed: () => _navigate(const SettingsScreen()),
