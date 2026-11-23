@@ -122,7 +122,7 @@ class MainActivity: FlutterActivity() {
             // Initialize Firebase AI Logic with Hybrid Inference (PREFER_ON_DEVICE routes to Gemini Nano first, falling back to Cloud Gemini)
             generativeModel = Firebase.ai(backend = GenerativeBackend.googleAI())
                 .generativeModel(
-                    modelName = "gemini-2.5-flash",
+                    modelName = "gemini-3.8-flash",
                     onDeviceConfig = OnDeviceConfig(
                         mode = InferenceMode.PREFER_ON_DEVICE
                     )
@@ -151,7 +151,7 @@ class MainActivity: FlutterActivity() {
                         "isFirebaseInitialized" to isFirebaseInitialized,
                         "isModelWarmedUp" to isModelWarmedUp,
                         "routingMode" to "PREFER_ON_DEVICE",
-                        "cloudFallbackModel" to "gemini-2.5-flash",
+                        "cloudFallbackModel" to "gemini-3.8-flash",
                         "onDeviceEngine" to "Gemini Nano (AICore)",
                         "androidSdkVersion" to Build.VERSION.SDK_INT,
                         "deviceManufacturer" to Build.MANUFACTURER,
