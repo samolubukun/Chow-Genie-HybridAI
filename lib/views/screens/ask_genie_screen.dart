@@ -524,28 +524,42 @@ class _AskGenieScreenState extends State<AskGenieScreen> {
             ),
             child: Row(
               children: [
-                Icon(Icons.auto_awesome, color: AppColors.brand, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'Generated Recipe',
-                  style: AppTextStyles.heading3.copyWith(color: AppColors.brand),
+                Icon(Icons.auto_awesome, color: AppColors.brand, size: 18),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Generated Recipe',
+                    style: AppTextStyles.heading3.copyWith(color: AppColors.brand, fontSize: 16),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 6),
                 Consumer<ModelManager>(
                   builder: (_, mm, __) => HybridAiBadge(
                     isOnDevice: mm.isLatestOnDevice,
-                    latencyMs: mm.latestLatencyMs,
                   ),
                 ),
                 const SizedBox(width: 8),
                 GestureDetector(
                   onTap: _copyRecipe,
-                  child: Icon(Icons.copy_rounded, color: colors.textSecondary, size: 20),
+                  child: Tooltip(
+                    message: 'Copy Recipe',
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(Icons.copy_rounded, color: colors.textSecondary, size: 18),
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 6),
                 GestureDetector(
                   onTap: _saveRecipe,
-                  child: Icon(Icons.bookmark_outline, color: colors.textSecondary, size: 20),
+                  child: Tooltip(
+                    message: 'Save Recipe',
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(Icons.bookmark_outline, color: colors.textSecondary, size: 20),
+                    ),
+                  ),
                 ),
               ],
             ),

@@ -13,6 +13,8 @@ import '../../viewmodels/meal_plan_view_model.dart';
 import '../../models/meal_plan.dart';
 import 'voice_cooking_screen.dart';
 import '../../widgets/cooking_timer_widget.dart';
+import '../../services/model_manager.dart';
+import '../../widgets/hybrid_ai_badge.dart';
 class RecipeDetailScreen extends StatefulWidget {
   final Recipe recipe;
 
@@ -585,11 +587,22 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                 Text('One-Tap Transforms', style: AppTextStyles.labelLarge.copyWith(color: colors.textPrimary)),
               ],
             ),
-            if (_activeTransform != null)
-              GestureDetector(
-                onTap: _revertTransform,
-                child: const Text('Revert to Original', style: TextStyle(color: AppColors.brand, fontSize: 12, fontWeight: FontWeight.bold)),
-              ),
+            Row(
+              children: [
+                if (_activeTransform != null) ...[
+                  Consumer<ModelManager>(
+                    builder: (_, mm, __) => HybridAiBadge(
+                      isOnDevice: mm.isLatestOnDevice,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: _revertTransform,
+                    child: const Text('Revert', style: TextStyle(color: AppColors.brand, fontSize: 12, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ],
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -600,7 +613,14 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
               children: [
                 const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.brand)),
                 const SizedBox(width: 12),
-                Text('Transforming recipe via Hybrid AI...', style: AppTextStyles.bodySmall.copyWith(color: AppColors.brand)),
+                Consumer<ModelManager>(
+                  builder: (_, mm, __) => Text(
+                    mm.isLatestOnDevice
+                        ? 'Transforming recipe on-device (Gemini Nano)...'
+                        : 'Transforming recipe via Cloud (Gemini Flash)...',
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.brand),
+                  ),
+                ),
               ],
             ),
           )

@@ -669,21 +669,61 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
             child: Text('Cancel', style: TextStyle(color: colors.textSecondary)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: const Row(
                     children: [
-                      Icon(Icons.auto_awesome, color: Colors.white, size: 18),
-                      SizedBox(width: 8),
-                      Text('Generating meal suggestion...'),
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      ),
+                      SizedBox(width: 10),
+                      Text('Generating meal suggestion via Hybrid AI...'),
                     ],
                   ),
+                  duration: const Duration(seconds: 4),
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               );
+
+              final profile = await LocalDbService.instance.getProfile();
+              final entry = await vm.suggestAndAddMealForSlot(
+                type: type,
+                date: date,
+                profile: profile,
+              );
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                if (entry != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          const Icon(Icons.check_circle, color: AppColors.brand, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text('Added "${entry.recipeTitle}" to your meal plan!')),
+                        ],
+                      ),
+                      backgroundColor: colors.surfaceAlt,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Could not generate meal suggestion. Please try again.'),
+                      backgroundColor: AppColors.error,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.brand,
@@ -900,14 +940,18 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
-            height: 42,
             child: ElevatedButton.icon(
               onPressed: vm.isLoading ? null : () => _handleGenerateSmartList(context, vm, colors),
-              icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
-              label: const Text('Add Missing Items to Shopping List', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
+              icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
+              label: const Text(
+                'Add Missing Items to Shopping List',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.brand,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 elevation: 0,
               ),
             ),

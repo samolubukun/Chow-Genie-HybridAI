@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import '../models/meal_plan.dart';
 import '../models/user_profile.dart';
 import '../models/shopping_item.dart';
+import '../models/recipe.dart';
 import '../services/model_manager.dart';
 import '../services/local_db_service.dart';
 import '../models/model_status.dart';
@@ -226,5 +228,87 @@ class MealPlanViewModel extends ChangeNotifier {
         'error': e.toString(),
       };
     }
+  }
+
+  /// Suggests a single meal tailored to slot & dietary preferences via Hybrid AI
+  /// and automatically inserts it into SQLite and the active meal plan.
+  Future<MealPlanEntry?> suggestAndAddMealForSlot({
+    required MealType type,
+    required DateTime date,
+    UserProfile? profile,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final typeName = type.name[0].toUpperCase() + type.name.substring(1);
+      final dietPrefs = (profile != null && profile.dietaryPreferences.isNotEmpty)
+          ? 'Dietary preferences: ${profile.dietaryPreferences.join(", ")}.'
+          : '';
+      final calGoal = profile != null
+          ? 'Target calorie goal per meal around ${(profile.dailyCalorieGoal / 3).round()} kcal.'
+          : '';
+
+      final prompt = '''
+Suggest a single healthy, delicious recipe for $typeName.
+$dietPrefs $calGoal
+Return ONLY valid JSON with this exact structure:
+{
+  "title": "Recipe Title",
+  "calories": 450,
+  "ingredients": ["1 cup ingredient", "2 tbsp ingredient"],
+  "directions": ["Step 1 instructions", "Step 2 instructions"]
+}
+Do not write markdown code fences or extra text, just raw JSON.
+''';
+
+      final response = await _modelManager.generateResponse(prompt);
+      if (response != null && response.isNotEmpty) {
+        String cleaned = response.trim();
+        if (cleaned.startsWith('```')) {
+          final lines = cleaned.split('\n');
+          if (lines.isNotEmpty && lines.first.startsWith('```')) lines.removeAt(0);
+          if (lines.isNotEmpty && lines.last.startsWith('```')) lines.removeLast();
+          cleaned = lines.join('\n').trim();
+        }
+
+        final data = jsonDecode(cleaned) as Map<String, dynamic>;
+        final title = data['title']?.toString() ?? '$typeName Suggestion';
+        final calories = (data['calories'] as num?)?.toDouble() ?? 450.0;
+        final ingredients = (data['ingredients'] as List?)?.map((e) => e.toString()).toList() ?? [];
+        final directions = (data['directions'] as List?)?.map((e) => e.toString()).toList() ?? [];
+
+        final recipeId = 'suggested_${_uuid.v4()}';
+        final recipe = Recipe(
+          id: recipeId,
+          title: title,
+          ingredients: ingredients,
+          directions: directions,
+          calories: calories,
+          source: RecipeSource.generated,
+          createdAt: DateTime.now(),
+        );
+        await _db.insertRecipe(recipe);
+
+        final entry = MealPlanEntry(
+          id: _uuid.v4(),
+          recipeId: recipeId,
+          recipeTitle: title,
+          mealType: type,
+          date: date,
+          estimatedCalories: calories,
+        );
+
+        await _db.insertMealPlanEntry(entry);
+        await loadWeek(date: date);
+        return entry;
+      }
+    } catch (e) {
+      debugPrint('[MealPlanViewModel] suggestAndAddMealForSlot error: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+    return null;
   }
 }

@@ -36,7 +36,7 @@ class HybridAiBadge extends StatelessWidget {
     } else {
       primaryColor = const Color(0xFF38BDF8); // Electric sky blue for Cloud Gemini Flash
       icon = Icons.cloud_done_rounded;
-      label = modelName ?? 'Gemini 3.8 Flash';
+      label = modelName ?? 'Gemini Flash';
     }
 
     final backgroundColor = isDark
@@ -48,13 +48,13 @@ class HybridAiBadge extends StatelessWidget {
           ? 'Retrieved from local offline SQLite library (73k+ recipes)'
           : (isOnDevice
               ? 'Executed locally on-device via Gemini Nano (AICore)'
-              : 'Executed via Firebase AI Logic Cloud Fallback (Gemini 3.8 Flash)'),
+              : 'Executed via Firebase AI Logic Cloud Fallback (Gemini Flash)'),
       child: Container(
-        height: 24,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        height: 22,
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
         decoration: BoxDecoration(
           color: backgroundColor,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(11),
           border: Border.all(
             color: primaryColor.withValues(alpha: 0.30),
             width: 0.8,
@@ -66,30 +66,19 @@ class HybridAiBadge extends StatelessWidget {
           children: [
             Icon(
               icon,
-              size: 13,
+              size: 12,
               color: primaryColor,
             ),
             const SizedBox(width: 4),
             Text(
               label,
               style: TextStyle(
-                fontSize: 10.5,
+                fontSize: 10,
                 fontWeight: FontWeight.w600,
                 color: primaryColor,
                 letterSpacing: 0.1,
               ),
             ),
-            if (latencyMs != null && latencyMs! > 0 && !isOffline) ...[
-              const SizedBox(width: 4),
-              Text(
-                '• ${latencyMs}ms',
-                style: TextStyle(
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w500,
-                  color: primaryColor.withValues(alpha: 0.85),
-                ),
-              ),
-            ],
           ],
         ),
       ),
