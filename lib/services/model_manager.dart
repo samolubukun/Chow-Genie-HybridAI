@@ -41,6 +41,12 @@ class ModelManager extends ChangeNotifier {
 
   ModelManager();
 
+  Future<void> downloadModel() async {
+    // In ChowGenie Hybrid AI 2.0, Firebase AI Logic requires zero model downloads.
+    // Immediately set ready status.
+    notifyListeners();
+  }
+
   /// Primary Route: Firebase AI Logic Hybrid Inference (On-Device Gemini Nano + Cloud Fallback)
   Future<String?> generateResponse(String prompt, {List<ChatMessage> history = const []}) async {
     try {
