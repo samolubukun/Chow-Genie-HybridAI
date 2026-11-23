@@ -67,7 +67,7 @@ flutter:
   assets:
     - assets/fonts/
     - assets/icons/
-    - assets/recipes.db
+    - assets/recipes.db.gz
   fonts:
     - family: Inter
       fonts:

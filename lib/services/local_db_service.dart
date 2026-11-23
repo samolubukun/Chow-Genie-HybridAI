@@ -46,7 +46,7 @@ class LocalDbService {
         final countResult = await tempDb.rawQuery('SELECT count(*) as count FROM recipes');
         final count = Sqflite.firstIntValue(countResult) ?? 0;
         await tempDb.close();
-        if (count == 0) {
+        if (count < 100) {
           shouldCopy = true;
         }
       } catch (_) {
@@ -60,9 +60,10 @@ class LocalDbService {
       } catch (_) {}
       
       try {
-        final data = await rootBundle.load('assets/recipes.db');
-        final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-        await File(path).writeAsBytes(bytes, flush: true);
+        final data = await rootBundle.load('assets/recipes.db.gz');
+        final compressedBytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+        final decompressedBytes = gzip.decode(compressedBytes);
+        await File(path).writeAsBytes(decompressedBytes, flush: true);
       } catch (e) {
         // Fallback or print error
       }
