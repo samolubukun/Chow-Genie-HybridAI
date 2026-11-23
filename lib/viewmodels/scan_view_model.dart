@@ -176,7 +176,7 @@ Return ONLY valid raw JSON without code blocks or headers.''';
           _setError('Could not extract nutritional details. Please make sure the photo is well-lit and covers the full item.');
         }
       } else {
-        _setError('Analysis failed. Ensure the AI model is downloaded and ready.');
+        _setError('Analysis failed. Please check network connectivity and try again.');
       }
     } catch (e) {
       _setError('Analysis error: $e');
@@ -197,7 +197,7 @@ Return ONLY valid raw JSON without code blocks or headers.''';
   }
 
   NutritionInfo? _parseNutritionJson(String raw) {
-    debugPrint('RAW GEMMA OUTPUT:\n$raw');
+    debugPrint('RAW HYBRID AI OUTPUT:\n$raw');
     try {
       String json = raw.trim();
       

@@ -126,7 +126,7 @@ Return ONLY raw valid JSON. Do not include markdown code block formatting (like 
           _setError('Could not extract food safety data. Please ensure the label is clearly visible.');
         }
       } else {
-        _setError('Analysis failed. Make sure the local AI model is fully downloaded.');
+        _setError('Analysis failed. Please check network connectivity and try again.');
       }
     } catch (e) {
       _setError('Analysis error: $e');
@@ -138,8 +138,8 @@ Return ONLY raw valid JSON. Do not include markdown code block formatting (like 
 
   IngrediGuardResult? _parseResultJson(String raw) {
     try {
-      debugPrint('RAW GEMMA OUTPUT FOR INGREDI GUARD:\n$raw');
-      // Clean gemma code block wrappers if present
+      debugPrint('RAW HYBRID AI OUTPUT FOR INGREDI GUARD:\n$raw');
+      // Clean AI code block wrappers if present
       String cleaned = raw.trim();
       if (cleaned.startsWith('```')) {
         final lines = cleaned.split('\n');

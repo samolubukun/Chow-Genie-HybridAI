@@ -22,8 +22,6 @@ import 'viewmodels/mesh_view_model.dart';
 import 'viewmodels/meal_plan_view_model.dart';
 import 'viewmodels/nutrition_view_model.dart';
 import 'viewmodels/ingrediguard_view_model.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
 import 'views/screens/home_page.dart';
 import 'views/screens/onboarding_screen.dart';
 import 'views/screens/model_download_screen.dart';
@@ -60,23 +58,6 @@ void main() async {
   runApp(ChowGenieApp(
     initialRoute: !hasProfile ? '/onboarding' : '/home',
   ));
-}
-
-Future<bool> _checkModelOnDisk() async {
-  try {
-    final dir = await _docDir();
-    final gemma4File = File('$dir/gemma-4-E2B-it.litertlm');
-    final gemma3File = File('$dir/gemma-3n-E2B-it-int4.litertlm');
-    return (gemma4File.existsSync() && await gemma4File.length() > 100000) ||
-           (gemma3File.existsSync() && await gemma3File.length() > 100000);
-  } catch (_) {
-    return false;
-  }
-}
-
-Future<String> _docDir() async {
-  final directory = await getApplicationDocumentsDirectory();
-  return directory.path;
 }
 
 class ChowGenieApp extends StatelessWidget {

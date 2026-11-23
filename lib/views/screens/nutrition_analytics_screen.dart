@@ -11,6 +11,7 @@ import '../../viewmodels/nutrition_view_model.dart';
 import '../../services/local_db_service.dart';
 import '../../services/model_manager.dart';
 import '../../services/image_service.dart';
+import '../../widgets/hybrid_ai_badge.dart';
 
 class NutritionAnalyticsScreen extends StatefulWidget {
   const NutritionAnalyticsScreen({super.key});
@@ -608,6 +609,13 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen> {
                       ),
                       const SizedBox(width: 10),
                       Text('AI Insight', style: AppTextStyles.labelLarge.copyWith(color: AppColors.accent)),
+                      const Spacer(),
+                      Consumer<ModelManager>(
+                        builder: (_, mm, __) => HybridAiBadge(
+                          isOnDevice: mm.isLatestOnDevice,
+                          latencyMs: mm.latestLatencyMs,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -638,7 +646,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen> {
     final mm = Provider.of<ModelManager>(context, listen: false);
     if (!mm.isReady) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("AI Model is not ready. Please download/initialize it in Settings.")),
+        const SnackBar(content: Text("AI Engine initializing. Please try again in a moment.")),
       );
       return;
     }
@@ -806,7 +814,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Gemma extracting meal data...',
+                            'Extracting meal data via Hybrid AI...',
                             style: AppTextStyles.bodySmall.copyWith(color: colors.textSecondary),
                           ),
                         ],

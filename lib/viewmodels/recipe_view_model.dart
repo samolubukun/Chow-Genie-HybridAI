@@ -141,7 +141,7 @@ class RecipeViewModel extends ChangeNotifier {
     UserProfile? profile,
   }) async {
     if (_modelManager.status != ModelStatus.ready) {
-      _errorMessage = 'Model not ready. Please download Gemma first.';
+      _errorMessage = 'AI Engine initializing. Please try again in a moment.';
       notifyListeners();
       return '';
     }

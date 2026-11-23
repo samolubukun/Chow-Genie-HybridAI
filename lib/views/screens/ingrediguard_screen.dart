@@ -6,6 +6,8 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../viewmodels/ingrediguard_view_model.dart';
 import '../../viewmodels/chat_view_model.dart';
+import '../../services/model_manager.dart';
+import '../../widgets/hybrid_ai_badge.dart';
 import '../../models/ingrediguard_result.dart';
 import '../widgets/capture_prompt_card.dart';
 import '../widgets/nutrient_result_card.dart';
@@ -154,7 +156,7 @@ class IngrediGuardScreen extends StatelessWidget {
                       if (vm.isAnalyzing)
                         const AnalyzingIndicator(
                           title: 'Analyzing Ingredients...',
-                          subtitle: 'Identifying additives and seed oils via Gemma...',
+                          subtitle: 'Analyzing ingredients via Firebase Hybrid AI...',
                         ),
                       if (vm.hasResult && vm.result != null)
                         _buildScanResults(context, vm, vm.result!),
@@ -301,10 +303,24 @@ class IngrediGuardScreen extends StatelessWidget {
       children: [
         if (!isBottomSheet) const SizedBox(height: 20),
         
-        // Product Name
-        Text(
-          result.productName,
-          style: AppTextStyles.displaySmall.copyWith(fontSize: 24, fontWeight: FontWeight.w800),
+        // Product Name and Hybrid AI Micro-Pill
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Text(
+                result.productName,
+                style: AppTextStyles.displaySmall.copyWith(fontSize: 24, fontWeight: FontWeight.w800),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Consumer<ModelManager>(
+              builder: (_, mm, __) => HybridAiBadge(
+                isOnDevice: mm.isLatestOnDevice,
+                latencyMs: mm.latestLatencyMs,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
 

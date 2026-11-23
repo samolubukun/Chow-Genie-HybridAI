@@ -5,6 +5,8 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../viewmodels/meal_plan_view_model.dart';
 import '../../services/local_db_service.dart';
+import '../../services/model_manager.dart';
+import '../../widgets/hybrid_ai_badge.dart';
 import '../screens/profile_edit_screen.dart';
 
 class DietPlanScreen extends StatefulWidget {
@@ -401,6 +403,13 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
             Text(
               'Your Weekly Plan',
               style: AppTextStyles.heading2.copyWith(color: colors.textPrimary),
+            ),
+            const Spacer(),
+            Consumer<ModelManager>(
+              builder: (_, mm, __) => HybridAiBadge(
+                isOnDevice: mm.isLatestOnDevice,
+                latencyMs: mm.latestLatencyMs,
+              ),
             ),
           ],
         ),
