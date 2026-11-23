@@ -10,6 +10,7 @@ import '../../models/chat_session.dart';
 import '../../viewmodels/chat_view_model.dart';
 import '../../services/model_manager.dart';
 import '../../widgets/cooking_timer_widget.dart';
+import '../../widgets/hybrid_ai_badge.dart';
 import 'settings_screen.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -422,9 +423,23 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (showTime)
                   Padding(
                     padding: EdgeInsets.only(top: 4, left: isUser ? 0 : 0, right: isUser ? 4 : 0),
-                    child: Text(
-                      DateFormat('h:mm a').format(msg.timestamp),
-                      style: AppTextStyles.bodySmall.copyWith(fontSize: 11),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          DateFormat('h:mm a').format(msg.timestamp),
+                          style: AppTextStyles.bodySmall.copyWith(fontSize: 11),
+                        ),
+                        if (!isUser) ...[
+                          const SizedBox(width: 8),
+                          Consumer<ModelManager>(
+                            builder: (_, mm, __) => HybridAiBadge(
+                              isOnDevice: mm.isLatestOnDevice,
+                              latencyMs: mm.latestLatencyMs,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
               ],
