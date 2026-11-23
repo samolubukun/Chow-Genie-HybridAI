@@ -8,6 +8,7 @@ import '../../viewmodels/pantry_view_model.dart';
 import '../../viewmodels/recipe_view_model.dart';
 import '../../models/pantry_item.dart';
 import '../../models/shopping_item.dart';
+import 'ask_genie_screen.dart';
 
 class PantryScreen extends StatefulWidget {
   const PantryScreen({super.key});
@@ -246,21 +247,11 @@ class _PantryScreenState extends State<PantryScreen> with SingleTickerProviderSt
         child: ElevatedButton.icon(
           onPressed: () {
             final names = context.read<PantryViewModel>().items.map((i) => i.name).join(', ');
-            context.read<RecipeViewModel>().generateRecipeFromIngredients(ingredients: names);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Row(
-                  children: [
-                    Icon(Icons.auto_awesome, color: AppColors.brand, size: 18),
-                    SizedBox(width: 8),
-                    Text('Scanning pantry for recipes...'),
-                  ],
-                ),
-                backgroundColor: colors.surfaceAlt,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AskGenieScreen()),
             );
+            context.read<RecipeViewModel>().generateRecipeFromIngredients(ingredients: names);
           },
           icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
           label: const Text('What Can I Make?', style: AppTextStyles.buttonMedium),

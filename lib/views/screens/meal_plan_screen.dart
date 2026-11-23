@@ -8,6 +8,8 @@ import '../../viewmodels/meal_plan_view_model.dart';
 import '../../viewmodels/recipe_view_model.dart';
 import '../../models/meal_plan.dart';
 import '../../services/local_db_service.dart';
+import '../../services/model_manager.dart';
+import '../../widgets/hybrid_ai_badge.dart';
 import 'meal_prep_screen.dart';
 import 'recipe_detail_screen.dart';
 
@@ -787,9 +789,16 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
               const SizedBox(height: 20),
               Row(
                 children: [
-                  const Icon(Icons.auto_awesome, color: AppColors.brand, size: 24),
+                  const Icon(Icons.auto_awesome, color: AppColors.brand, size: 22),
                   const SizedBox(width: 8),
-                  Text('Your Weekly Plan', style: AppTextStyles.heading2.copyWith(color: colors.textPrimary)),
+                  Expanded(
+                    child: Text('Your Weekly Plan', style: AppTextStyles.heading2.copyWith(color: colors.textPrimary)),
+                  ),
+                  Consumer<ModelManager>(
+                    builder: (_, mm, __) => HybridAiBadge(
+                      isOnDevice: mm.isLatestOnDevice,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
