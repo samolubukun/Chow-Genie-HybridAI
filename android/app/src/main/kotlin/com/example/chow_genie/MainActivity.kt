@@ -166,75 +166,84 @@ class MainActivity: FlutterActivity() {
                     val startTime = System.currentTimeMillis()
 
                     CoroutineScope(Dispatchers.Main).launch {
-                        try {
-                            val model = generativeModel
-                            if (model != null) {
-                                val generatedText = withContext(Dispatchers.IO) {
+                        // Multi-model resilience cascade: Flash-Lite (fastest, lowest load) -> 3.8 Flash -> 3.5 Flash
+                        val candidateModels = listOf(
+                            "gemini-3.5-flash-lite",
+                            "gemini-3.8-flash",
+                            "gemini-3.5-flash"
+                        )
+
+                        var generatedText: String? = null
+                        var successfulModel = "gemini-3.5-flash-lite"
+                        var lastError: Exception? = null
+
+                        for (modelName in candidateModels) {
+                            try {
+                                val currentModel = Firebase.ai(backend = GenerativeBackend.googleAI())
+                                    .generativeModel(
+                                        modelName = modelName,
+                                        onDeviceConfig = OnDeviceConfig(mode = InferenceMode.PREFER_ON_DEVICE)
+                                    )
+
+                                val text = withContext(Dispatchers.IO) {
                                     if (imageBase64 != null && imageBase64.isNotEmpty()) {
-                                        // Multimodal Prompt (Text + Image Bitmap)
                                         val imageBytes = Base64.decode(imageBase64, Base64.DEFAULT)
                                         val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
                                         val inputContent = content {
                                             image(bitmap)
                                             text(prompt)
                                         }
-                                        try {
-                                            val response = model.generateContent(inputContent)
-                                            response.text ?: "No response generated"
-                                        } catch (e: Exception) {
-                                            if (e.message?.contains("deadline", ignoreCase = true) == true) {
-                                                val retry = model.generateContent(inputContent)
-                                                retry.text ?: "No response generated"
-                                            } else throw e
-                                        }
+                                        currentModel.generateContent(inputContent).text
                                     } else {
-                                        // Text Prompt with automatic retry on cold-start deadline timeout
-                                        try {
-                                            val response = model.generateContent(prompt)
-                                            response.text ?: "No response generated"
-                                        } catch (e: Exception) {
-                                            if (e.message?.contains("deadline", ignoreCase = true) == true) {
-                                                val retry = model.generateContent(prompt)
-                                                retry.text ?: "No response generated"
-                                            } else throw e
-                                        }
+                                        currentModel.generateContent(prompt).text
                                     }
                                 }
 
-                                val latencyMs = System.currentTimeMillis() - startTime
-                                // If latency < 600ms on modern Android devices, it typically indicates on-device Gemini Nano execution
-                                val executionSource = if (latencyMs < 600) "on_device_gemini_nano" else "cloud_gemini_fallback"
-
-                                result.success(
-                                    mapOf(
-                                        "status" to "success",
-                                        "text" to generatedText,
-                                        "executionMode" to executionSource,
-                                        "latencyMs" to latencyMs,
-                                        "model" to "Firebase AI Logic Hybrid (Nano/Flash)"
-                                    )
-                                )
-                            } else {
-                                // Fallback simulation for local dev environments without active Google Services credentials
-                                val latencyMs = System.currentTimeMillis() - startTime
-                                result.success(
-                                    mapOf(
-                                        "status" to "success",
-                                        "text" to "ChowGenie Hybrid AI (On-Device Gemini Nano): Processed recipe instructions locally.\nPrompt: $prompt",
-                                        "executionMode" to "on_device_gemini_nano",
-                                        "latencyMs" to latencyMs,
-                                        "model" to "Firebase AI Logic (On-Device Simulation)"
-                                    )
-                                )
+                                if (text != null && text.isNotEmpty()) {
+                                    generatedText = text
+                                    successfulModel = modelName
+                                    break
+                                }
+                            } catch (e: Exception) {
+                                lastError = e
+                                val msg = e.localizedMessage ?: e.message ?: ""
+                                android.util.Log.w("MainActivity", "Model $modelName attempt failed: $msg")
+                                val isOffline = e is java.net.UnknownHostException || 
+                                               e is java.net.ConnectException || 
+                                               e is java.net.SocketTimeoutException ||
+                                               msg.contains("network", ignoreCase = true) || 
+                                               msg.contains("Unable to resolve host", ignoreCase = true) ||
+                                               msg.contains("Failed to connect", ignoreCase = true)
+                                if (isOffline || msg.contains("AppCheck", ignoreCase = true) || msg.contains("token is invalid", ignoreCase = true)) {
+                                    break
+                                }
                             }
-                        } catch (e: Exception) {
-                            android.util.Log.e("MainActivity", "Firebase AI execution failed", e)
-                            val latencyMs = System.currentTimeMillis() - startTime
-                            val errorMsg = e.localizedMessage ?: e.message ?: "Unknown error"
-                            
-                            val isOffline = e is java.net.UnknownHostException || 
-                                           e is java.net.ConnectException || 
-                                           e is java.net.SocketTimeoutException ||
+                        }
+
+                        val latencyMs = System.currentTimeMillis() - startTime
+
+                        if (generatedText != null) {
+                            val executionSource = if (latencyMs < 600) "on_device_gemini_nano" else "cloud_gemini_fallback"
+                            val friendlyName = when (successfulModel) {
+                                "gemini-3.5-flash-lite" -> "Gemini 3.5 Flash-Lite"
+                                "gemini-3.8-flash" -> "Gemini 3.8 Flash"
+                                "gemini-3.5-flash" -> "Gemini 3.5 Flash"
+                                else -> successfulModel
+                            }
+                            result.success(
+                                mapOf(
+                                    "status" to "success",
+                                    "text" to generatedText,
+                                    "executionMode" to executionSource,
+                                    "latencyMs" to latencyMs,
+                                    "model" to friendlyName
+                                )
+                            )
+                        } else {
+                            val errorMsg = lastError?.localizedMessage ?: lastError?.message ?: "Unknown error"
+                            val isOffline = lastError is java.net.UnknownHostException || 
+                                           lastError is java.net.ConnectException || 
+                                           lastError is java.net.SocketTimeoutException ||
                                            errorMsg.contains("network", ignoreCase = true) || 
                                            errorMsg.contains("Unable to resolve host", ignoreCase = true) ||
                                            errorMsg.contains("Failed to connect", ignoreCase = true)
@@ -244,6 +253,8 @@ class MainActivity: FlutterActivity() {
                                 "You are currently offline. On-device Gemini Nano requires an AICore-supported device (such as Google Pixel 8/9 or Samsung Galaxy S24). Please connect to the internet to use Cloud Gemini Flash, or explore the 73,000+ recipes available in your offline library."
                             } else if (errorMsg.contains("AppCheck", ignoreCase = true) || errorMsg.contains("token", ignoreCase = true)) {
                                 "Firebase App Check token validation pending.\n\nYour active device debug token is:\n`$activeToken`\n\nEnsure this token is added in Firebase Console > App Check > Apps > com.example.chow_genie (⋮) > Manage debug tokens."
+                            } else if (errorMsg.contains("high demand", ignoreCase = true) || errorMsg.contains("spike", ignoreCase = true) || errorMsg.contains("503", ignoreCase = true)) {
+                                "Google Gemini models are currently experiencing temporary high regional demand. Please try your prompt again in a moment, or explore the 73,000+ recipes in your offline library."
                             } else {
                                 "ChowGenie Hybrid AI: $errorMsg"
                             }
@@ -254,7 +265,7 @@ class MainActivity: FlutterActivity() {
                                     "text" to responseText,
                                     "executionMode" to "cloud_gemini_fallback",
                                     "latencyMs" to latencyMs,
-                                    "model" to "Firebase AI Logic (Cloud Gemini Flash)"
+                                    "model" to "Firebase AI Logic (Cloud Fallback)"
                                 )
                             )
                         }
