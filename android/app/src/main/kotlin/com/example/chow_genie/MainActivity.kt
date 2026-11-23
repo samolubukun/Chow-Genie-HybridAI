@@ -170,84 +170,68 @@ class MainActivity: FlutterActivity() {
                     val startTime = System.currentTimeMillis()
 
                     CoroutineScope(Dispatchers.Main).launch {
-                        // Multi-model resilience cascade: Primary 3.8 Flash (first) -> 2.5 Flash -> 2.0 Flash
-                        val candidateModels = listOf(
-                            "gemini-3.8-flash",
-                            "gemini-2.5-flash",
-                            "gemini-2.0-flash"
-                        )
-
                         var generatedText: String? = null
-                        var successfulModel = "gemini-3.8-flash"
                         var lastError: Exception? = null
 
-                        for (modelName in candidateModels) {
-                            try {
-                                val currentModel = Firebase.ai(backend = GenerativeBackend.googleAI())
-                                    .generativeModel(
-                                        modelName = modelName,
-                                        onDeviceConfig = OnDeviceConfig(mode = InferenceMode.PREFER_ON_DEVICE)
-                                    )
+                        try {
+                            val model = Firebase.ai(backend = GenerativeBackend.googleAI())
+                                .generativeModel(
+                                    modelName = "gemini-3.8-flash",
+                                    onDeviceConfig = OnDeviceConfig(mode = InferenceMode.PREFER_ON_DEVICE)
+                                )
 
-                                val text = withContext(Dispatchers.IO) {
-                                    if (imageBase64 != null && imageBase64.isNotEmpty()) {
-                                        val imageBytes = Base64.decode(imageBase64, Base64.DEFAULT)
-                                        val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                                        BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, boundsOptions)
-                                        var inSample = 1
-                                        while (boundsOptions.outWidth / inSample > 1024 || boundsOptions.outHeight / inSample > 1024) {
-                                            inSample *= 2
-                                        }
-                                        val decodeOptions = BitmapFactory.Options().apply { inSampleSize = inSample }
-                                        val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, decodeOptions)
-                                        val inputContent = content {
-                                            image(bitmap)
-                                            text(prompt)
-                                        }
-                                        currentModel.generateContent(inputContent).text
-                                    } else {
-                                        currentModel.generateContent(prompt).text
+                            val text = withContext(Dispatchers.IO) {
+                                if (imageBase64 != null && imageBase64.isNotEmpty()) {
+                                    val imageBytes = Base64.decode(imageBase64, Base64.DEFAULT)
+                                    val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                                    BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, boundsOptions)
+                                    var inSample = 1
+                                    while (boundsOptions.outWidth / inSample > 1024 || boundsOptions.outHeight / inSample > 1024) {
+                                        inSample *= 2
+                                    }
+                                    val decodeOptions = BitmapFactory.Options().apply { inSampleSize = inSample }
+                                    val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, decodeOptions)
+                                    val inputContent = content {
+                                        image(bitmap)
+                                        text(prompt)
+                                    }
+                                    try {
+                                        model.generateContent(inputContent).text
+                                    } catch (e: Exception) {
+                                        if (e.message?.contains("deadline", ignoreCase = true) == true) {
+                                            model.generateContent(inputContent).text
+                                        } else throw e
+                                    }
+                                } else {
+                                    try {
+                                        model.generateContent(prompt).text
+                                    } catch (e: Exception) {
+                                        if (e.message?.contains("deadline", ignoreCase = true) == true) {
+                                            model.generateContent(prompt).text
+                                        } else throw e
                                     }
                                 }
-
-                                if (text != null && text.isNotEmpty()) {
-                                    generatedText = text
-                                    successfulModel = modelName
-                                    break
-                                }
-                            } catch (e: Exception) {
-                                lastError = e
-                                val msg = e.localizedMessage ?: e.message ?: ""
-                                android.util.Log.w("MainActivity", "Model $modelName attempt failed: $msg")
-                                val isOffline = e is java.net.UnknownHostException || 
-                                               e is java.net.ConnectException || 
-                                               e is java.net.SocketTimeoutException ||
-                                               msg.contains("network", ignoreCase = true) || 
-                                               msg.contains("Unable to resolve host", ignoreCase = true) ||
-                                               msg.contains("Failed to connect", ignoreCase = true)
-                                if (isOffline || msg.contains("AppCheck", ignoreCase = true) || msg.contains("token is invalid", ignoreCase = true)) {
-                                    break
-                                }
                             }
+
+                            if (text != null && text.isNotEmpty()) {
+                                generatedText = text
+                            }
+                        } catch (e: Exception) {
+                            lastError = e
+                            android.util.Log.w("MainActivity", "Inference attempt failed: ${e.message}")
                         }
 
                         val latencyMs = System.currentTimeMillis() - startTime
 
                         if (generatedText != null) {
                             val executionSource = if (latencyMs < 600) "on_device_gemini_nano" else "cloud_gemini_fallback"
-                            val friendlyName = when (successfulModel) {
-                                "gemini-3.8-flash" -> "Gemini 3.8 Flash"
-                                "gemini-2.5-flash" -> "Gemini 2.5 Flash"
-                                "gemini-2.0-flash" -> "Gemini 2.0 Flash"
-                                else -> successfulModel
-                            }
                             result.success(
                                 mapOf(
                                     "status" to "success",
                                     "text" to generatedText,
                                     "executionMode" to executionSource,
                                     "latencyMs" to latencyMs,
-                                    "model" to friendlyName
+                                    "model" to "Gemini 3.8 Flash"
                                 )
                             )
                         } else {
@@ -276,7 +260,7 @@ class MainActivity: FlutterActivity() {
                                     "text" to responseText,
                                     "executionMode" to "cloud_gemini_fallback",
                                     "latencyMs" to latencyMs,
-                                    "model" to "Firebase AI Logic (Cloud Fallback)"
+                                    "model" to "Gemini 3.8 Flash"
                                 )
                             )
                         }
