@@ -26,6 +26,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _showScrollBtn = false;
   int _lastMessageCount = 0;
   String? _lastSessionId;
+  String? _pendingImagePath;
 
   @override
   void initState() {
@@ -256,6 +257,7 @@ class _ChatScreenState extends State<ChatScreen> {
         final countChanged = vm.messages.length != _lastMessageCount;
 
         if (sessionChanged) {
+          _pendingImagePath = null;
           _lastSessionId = currentSessionId;
           _lastMessageCount = vm.messages.length;
           if (vm.messages.isNotEmpty) {
@@ -488,6 +490,10 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildInputBar(ChatViewModel vm, AppColorSet colors) {
+    final hasText = _controller.text.trim().isNotEmpty;
+    final hasImage = _pendingImagePath != null;
+    final canSend = (hasText || hasImage) && !vm.isGenerating;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       decoration: BoxDecoration(
@@ -496,72 +502,133 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       child: SafeArea(
         top: false,
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            GestureDetector(
-              onTap: vm.isGenerating ? null : _showImageSourceSheet,
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: colors.surfaceAlt,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(Icons.add_photo_alternate_outlined, color: colors.textSecondary, size: 20),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
-                controller: _controller,
-                textCapitalization: TextCapitalization.sentences,
-                maxLines: 4,
-                minLines: 1,
-                textInputAction: TextInputAction.send,
-                decoration: InputDecoration(
-                  hintText: vm.isGenerating ? 'AI is thinking...' : 'Ask about food...',
-                  filled: true,
-                  fillColor: colors.surfaceAlt,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-                onSubmitted: (_) => _sendMessage(vm),
-              ),
-            ),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: vm.isGenerating || _controller.text.trim().isEmpty
-                  ? null
-                  : () => _sendMessage(vm),
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  gradient: (_controller.text.trim().isNotEmpty && !vm.isGenerating)
-                      ? const LinearGradient(colors: AppColors.brandGradient)
-                      : null,
-                  color: (_controller.text.trim().isEmpty || vm.isGenerating)
-                      ? colors.surfaceAlt
-                      : null,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: vm.isGenerating
-                    ? SizedBox(
-                        width: 20, height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: colors.textOnBrand,
-                        ),
-                      )
-                    : Icon(
-                        Icons.send_rounded,
-                        color: (_controller.text.trim().isNotEmpty && !vm.isGenerating)
-                            ? colors.textOnBrand
-                            : colors.textTertiary,
-                        size: 20,
+            if (_pendingImagePath != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10, left: 4),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.brand.withValues(alpha: 0.4), width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(
+                          File(_pendingImagePath!),
+                          height: 72,
+                          width: 72,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: -6,
+                      right: -6,
+                      child: GestureDetector(
+                        onTap: () => setState(() => _pendingImagePath = null),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: colors.cardElevated,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: colors.border),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: Icon(Icons.close_rounded, size: 14, color: colors.textPrimary),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: vm.isGenerating ? null : _showImageSourceSheet,
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: _pendingImagePath != null
+                          ? AppColors.brand.withValues(alpha: 0.15)
+                          : colors.surfaceAlt,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.add_photo_alternate_outlined,
+                      color: _pendingImagePath != null ? AppColors.brand : colors.textSecondary,
+                      size: 20,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    textCapitalization: TextCapitalization.sentences,
+                    maxLines: 4,
+                    minLines: 1,
+                    textInputAction: TextInputAction.send,
+                    decoration: InputDecoration(
+                      hintText: vm.isGenerating
+                          ? 'AI is thinking...'
+                          : (_pendingImagePath != null
+                              ? 'Ask about this photo (or send)...'
+                              : 'Ask about food...'),
+                      filled: true,
+                      fillColor: colors.surfaceAlt,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    onSubmitted: (_) => _sendMessage(vm),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: canSend ? () => _sendMessage(vm) : null,
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      gradient: canSend ? const LinearGradient(colors: AppColors.brandGradient) : null,
+                      color: !canSend ? colors.surfaceAlt : null,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: vm.isGenerating
+                        ? SizedBox(
+                            width: 20, height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: colors.textOnBrand,
+                            ),
+                          )
+                        : Icon(
+                            Icons.send_rounded,
+                            color: canSend ? colors.textOnBrand : colors.textTertiary,
+                            size: 20,
+                          ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -571,10 +638,21 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _sendMessage(ChatViewModel vm) {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
+    final imagePath = _pendingImagePath;
+    if (text.isEmpty && imagePath == null) return;
+
     _controller.clear();
+    setState(() => _pendingImagePath = null);
     _scrollToBottom(animate: true);
-    vm.sendMessage(text);
+
+    if (imagePath != null) {
+      vm.sendMultimodalMessage(
+        text.isEmpty ? 'Analyze this food photo and provide recipe and nutrition insights.' : text,
+        imagePath,
+      );
+    } else {
+      vm.sendMessage(text);
+    }
   }
 
   void _showImageSourceSheet() {
@@ -613,13 +691,9 @@ class _ChatScreenState extends State<ChatScreen> {
                         Navigator.pop(ctx);
                         final path = await vm.takePhoto();
                         if (path != null) {
-                          final text = _controller.text.trim();
-                          _controller.clear();
-                          _scrollToBottom(animate: true);
-                          await vm.sendMultimodalMessage(
-                            text.isEmpty ? 'Analyze this food image.' : text,
-                            path,
-                          );
+                          setState(() {
+                            _pendingImagePath = path;
+                          });
                         }
                       },
                     ),
@@ -634,13 +708,9 @@ class _ChatScreenState extends State<ChatScreen> {
                         Navigator.pop(ctx);
                         final path = await vm.pickImage();
                         if (path != null) {
-                          final text = _controller.text.trim();
-                          _controller.clear();
-                          _scrollToBottom(animate: true);
-                          await vm.sendMultimodalMessage(
-                            text.isEmpty ? 'Analyze this food image.' : text,
-                            path,
-                          );
+                          setState(() {
+                            _pendingImagePath = path;
+                          });
                         }
                       },
                     ),
