@@ -42,6 +42,8 @@ ChowGenie Hybrid AI is built for Google's **#BuildHybridAI 2026** competition. I
 
 ## Existing App Upgrade Delta (Hackathon Period)
 
+> **Original Pre-Hackathon Repository:** [samolubukun/Chow-Genie](https://github.com/samolubukun/Chow-Genie)
+
 In accordance with official hackathon rules for existing projects, the table below documents the major architectural and runtime additions built during the competition:
 
 | Capability | Prior Version | #BuildHybridAI 2026 Upgrade |
