@@ -100,12 +100,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
               SliverToBoxAdapter(child: _buildDayTabs(context, vm, colors, activeDate)),
               if (vm.entries.isNotEmpty)
                 SliverToBoxAdapter(child: _buildSmartShoppingBanner(context, vm, colors)),
-              if (vm.entries.isEmpty && !vm.isLoading)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _buildEmptyState(colors, vm),
-                )
-              else if (_showAllWeek) ...[
+              if (_showAllWeek) ...[
                 // All Week Grouped View
                 SliverToBoxAdapter(
                   child: Padding(
