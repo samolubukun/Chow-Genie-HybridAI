@@ -41,7 +41,23 @@ class MealPlanViewModel extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     if (date != null) _currentWeekStart = _weekStart(date);
-    _entries = await _db.getMealPlanEntries(_currentWeekStart);
+    final rawEntries = await _db.getMealPlanEntries(_currentWeekStart);
+
+    // Deduplicate repeated entries for the same slot if duplicated previously
+    final uniqueEntries = <MealPlanEntry>[];
+    final seenKeys = <String>{};
+    for (final e in rawEntries) {
+      final key = '${e.date.toIso8601String().split('T')[0]}_${e.mealType.name}_${e.recipeTitle.toLowerCase().trim()}';
+      if (!seenKeys.contains(key)) {
+        seenKeys.add(key);
+        uniqueEntries.add(e);
+      } else {
+        // Clean up redundant duplicate row in database
+        _db.deleteMealPlanEntry(e.id);
+      }
+    }
+
+    _entries = uniqueEntries;
     _preppedEntries = _entries.where((e) => e.isPrepped).toList();
     _generatedPlan = await _db.getGeneratedWeeklyPlan(_currentWeekStart);
     _isLoading = false;
@@ -72,7 +88,10 @@ class MealPlanViewModel extends ChangeNotifier {
     }
   }
 
-  Future<int> applyWeeklyPlanEntries(List<MealPlanEntry> entries) async {
+  Future<int> applyWeeklyPlanEntries(List<MealPlanEntry> entries, {bool replaceWeek = true}) async {
+    if (replaceWeek) {
+      await _db.clearMealPlanEntriesForWeek(_currentWeekStart);
+    }
     for (final entry in entries) {
       await _db.insertMealPlanEntry(entry);
     }
@@ -202,9 +221,16 @@ Make all meals creative, balanced, delicious, and strictly aligned with user pre
 
       final allIngredients = <String>[];
       for (final entry in _entries) {
-        final recipe = await _db.getRecipe(entry.recipeId);
-        if (recipe != null) {
+        Recipe? recipe;
+        if (entry.recipeId.isNotEmpty) {
+          recipe = await _db.getRecipe(entry.recipeId);
+        }
+        if (recipe != null && recipe.ingredients.isNotEmpty) {
           allIngredients.addAll(recipe.ingredients);
+        } else {
+          // Fallback: smart culinary ingredient extraction from recipe title
+          final extracted = _extractIngredientsFromTitle(entry.recipeTitle);
+          allIngredients.addAll(extracted);
         }
       }
 
@@ -261,6 +287,27 @@ Make all meals creative, balanced, delicious, and strictly aligned with user pre
         'error': e.toString(),
       };
     }
+  }
+
+  List<String> _extractIngredientsFromTitle(String title) {
+    if (title.trim().isEmpty) return [];
+
+    String cleaned = title
+        .replaceAll(RegExp(r'\b(fresh|steamed|baked|grilled|roasted|sauteed|sautéed|boiled|crispy|fried|pan-seared|slow-cooked|homemade|healthy|quick|easy|spicy|sweet|warm|creamy)\b', caseSensitive: false), '')
+        .trim();
+
+    final parts = cleaned.split(RegExp(r'\s+(?:with|and|&|served with|topped with|over|on|in)\s+', caseSensitive: false));
+    final result = <String>[];
+    for (final p in parts) {
+      final subparts = p.split(',');
+      for (var s in subparts) {
+        s = s.replaceAll(RegExp(r'[\(\)\[\]\*]'), '').trim();
+        if (s.isNotEmpty && s.length > 2) {
+          result.add(s);
+        }
+      }
+    }
+    return result.isNotEmpty ? result : [title.trim()];
   }
 
   /// Suggests a single meal tailored to slot & dietary preferences via Hybrid AI

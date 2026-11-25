@@ -967,14 +967,18 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
             child: ElevatedButton.icon(
               onPressed: vm.isLoading ? null : () => _handleGenerateSmartList(context, vm, colors),
               icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
-              label: const Text(
-                'Add Missing Items to Shopping List',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: Colors.white),
+              label: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'Add Missing Items to Shopping List',
+                  maxLines: 1,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.brand,
-                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 elevation: 0,
               ),

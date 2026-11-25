@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../models/meal_plan.dart';
+import '../../models/recipe.dart';
 import '../../viewmodels/meal_plan_view_model.dart';
 import '../../services/local_db_service.dart';
 import '../../services/model_manager.dart';
@@ -458,17 +459,14 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    Text(
+                      'Your Weekly Plan',
+                      style: AppTextStyles.heading2.copyWith(color: colors.textPrimary),
+                    ),
+                    const SizedBox(height: 4),
                     Row(
                       children: [
-                        Flexible(
-                          child: Text(
-                            'Your Weekly Plan',
-                            style: AppTextStyles.heading2.copyWith(color: colors.textPrimary),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
                         if (totalMeals > 0) ...[
-                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
@@ -480,15 +478,17 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
                               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brand),
                             ),
                           ),
+                          const SizedBox(width: 6),
                         ],
+                        Flexible(
+                          child: Consumer<ModelManager>(
+                            builder: (_, mm, __) => HybridAiBadge(
+                              isOnDevice: mm.isLatestOnDevice,
+                              modelName: mm.latestModelName,
+                            ),
+                          ),
+                        ),
                       ],
-                    ),
-                    const SizedBox(height: 4),
-                    Consumer<ModelManager>(
-                      builder: (_, mm, __) => HybridAiBadge(
-                        isOnDevice: mm.isLatestOnDevice,
-                        modelName: mm.latestModelName,
-                      ),
                     ),
                   ],
                 ),
@@ -607,7 +607,14 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
                     child: ElevatedButton.icon(
                       onPressed: () => _applyPlanToCalendar(context, vm, days),
                       icon: const Icon(Icons.add_task_rounded, size: 20),
-                      label: const Text('Apply Plan to Weekly Calendar', style: TextStyle(fontWeight: FontWeight.bold)),
+                      label: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Apply Plan to Weekly Calendar',
+                          maxLines: 1,
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                        ),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.brand,
                         foregroundColor: colors.textOnBrand,
@@ -658,18 +665,34 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
       final offset = _dayOffset(entry.key);
       final date = vm.currentWeekStart.add(Duration(days: offset));
       for (final meal in entry.value) {
+        final recipeId = 'plan_${uuid.v4()}';
+        final parsedIngredients = _extractIngredients(meal.title);
+
+        final recipe = Recipe(
+          id: recipeId,
+          title: meal.title,
+          ingredients: parsedIngredients,
+          directions: ['Prepare ${meal.title} with balanced nutrition.', 'Cook thoroughly and serve fresh.'],
+          calories: meal.type == MealType.snack ? 180.0 : (meal.type == MealType.breakfast ? 420.0 : 560.0),
+          source: 'Weekly Meal Plan',
+          isUserGenerated: true,
+          createdAt: DateTime.now(),
+        );
+        await LocalDbService.instance.insertRecipe(recipe);
+
         entries.add(MealPlanEntry(
           id: uuid.v4(),
-          recipeId: '',
+          recipeId: recipeId,
           recipeTitle: meal.title,
           mealType: meal.type,
           date: date,
           servings: 2,
+          estimatedCalories: recipe.calories,
         ));
       }
     }
 
-    await vm.applyWeeklyPlanEntries(entries);
+    await vm.applyWeeklyPlanEntries(entries, replaceWeek: true);
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -688,6 +711,27 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
         ),
       );
     }
+  }
+
+  List<String> _extractIngredients(String title) {
+    if (title.trim().isEmpty) return [];
+
+    String cleaned = title
+        .replaceAll(RegExp(r'\b(fresh|steamed|baked|grilled|roasted|sauteed|sautéed|boiled|crispy|fried|pan-seared|slow-cooked|homemade|healthy|quick|easy|spicy|sweet|warm|creamy)\b', caseSensitive: false), '')
+        .trim();
+
+    final parts = cleaned.split(RegExp(r'\s+(?:with|and|&|served with|topped with|over|on|in)\s+', caseSensitive: false));
+    final result = <String>[];
+    for (final p in parts) {
+      final subparts = p.split(',');
+      for (var s in subparts) {
+        s = s.replaceAll(RegExp(r'[\(\)\[\]\*]'), '').trim();
+        if (s.isNotEmpty && s.length > 2) {
+          result.add(s);
+        }
+      }
+    }
+    return result.isNotEmpty ? result : [title.trim()];
   }
 
   Widget _buildDayCard(

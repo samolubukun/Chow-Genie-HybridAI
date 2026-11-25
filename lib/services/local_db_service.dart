@@ -466,6 +466,16 @@ class LocalDbService {
     await db.insert('meal_plan_entries', entry.toJson(), conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
+  Future<void> clearMealPlanEntriesForWeek(DateTime weekStart) async {
+    final db = await database;
+    final dateStr = weekStart.toIso8601String().split('T')[0];
+    final endStr = weekStart.add(const Duration(days: 7)).toIso8601String().split('T')[0];
+    await db.delete('meal_plan_entries',
+      where: 'date >= ? AND date < ?',
+      whereArgs: [dateStr, endStr],
+    );
+  }
+
   Future<List<MealPlanEntry>> getMealPlanEntries(DateTime weekStart) async {
     final db = await database;
     final dateStr = weekStart.toIso8601String().split('T')[0];
