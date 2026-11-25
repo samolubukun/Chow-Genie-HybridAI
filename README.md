@@ -42,25 +42,24 @@ ChowGenie Hybrid AI is built for Google's **#BuildHybridAI 2026** competition. I
 
 ## Existing App Upgrade Delta (Hackathon Period)
 
-> **Original Pre-Hackathon Repository:** [samolubukun/Chow-Genie](https://github.com/samolubukun/Chow-Genie)
+> **Original Pre-Hackathon Repository:** [samolubukun/Chow-Genie](https://github.com/samolubukun/Chow-Genie) (Previously powered by Google's Gemma 4 E2B IT (`gemma-4-E2B-it.litertlm` ~2.59GB LiteRT-LM via `flutter_gemma`); Upgraded to **Firebase AI Logic**: on-device `Gemini Nano` + cloud `gemini-3.8-flash`)
 
 In accordance with official hackathon rules for existing projects, the table below documents the major architectural and runtime additions built during the competition:
 
 | Capability | Prior Version | #BuildHybridAI 2026 Upgrade |
 | :--- | :--- | :--- |
-| **AI Inference** | Heavy local model (~2.7GB Hugging Face download block) | **Firebase AI Logic Hybrid SDK** (Gemini Nano local + Gemini 3.8 Flash Cloud cascade) |
+| **AI Inference** | Heavy local model download (`gemma-4-E2B-it.litertlm` ~2.59GB LiteRT-LM via `flutter_gemma`) | **Firebase AI Logic Hybrid SDK** (Zero-download on-device Gemini Nano via AICore + `gemini-3.8-flash` Cloud fallback cascade) |
 | **Android Integration** | Basic Flutter activity | **Native Kotlin Bridge** (`MainActivity.kt`) importing `com.google.firebase:firebase-ai` & `firebase-ai-ondevice` |
 | **Web Platform** | Desktop/mobile only | **Multi-Platform Web Support** (Chrome Desktop Gemini Nano Prompt API interop) |
 | **Security Gate** | None | **Firebase App Check** (`DebugAppCheckProviderFactory` configured) |
 | **Prompt Tuning** | Hardcoded strings | **Firebase Remote Config** (dynamic `ai_routing_mode` & prompt templates) |
 | **Offline Library** | Remote API dependency | **Instant Tier-3 SQLite Fallback** (73,322 offline recipes with zero-latency local fallback) |
-| **Pantry Intake** | Manual typing only | **Receipt Scanner $\rightarrow$ Auto-Pantry** (Multimodal Gemini 3.8 Flash auto-extracting items & shelf-life) |
+| **Pantry Intake** | Manual typing only | **Scan Supermarket Receipt to Auto-Pantry** — Multimodal `gemini-3.8-flash` auto-extracts grocery items & shelf-life from photos/receipts |
 | **Recipe Adaptation** | Static recipes | **One-Tap Recipe Transforms & Scaler** (Gemini Nano on-device: Vegan, High-Protein, Budget + dynamic scaler) |
 | **Cooking Guidance** | Static step text | **Embedded Smart Cooking Timers** (Regex duration detection, circular countdown ring, audio-haptic alerts) |
 | **Grocery Planning** | Manual list entry | **Smart AI Grocery Sync** — Hybrid AI parses the meal plan, extracts real ingredients, deduplicates, and outputs a clean shopping list cross-checked against pantry stock |
-| **Receipt Scanner → Auto-Pantry** | Manual pantry entry | **Scan Supermarket Receipt with Hybrid AI** — photo or gallery upload; Gemini 3.8 Flash OCR extracts items + shelf-life and auto-populates pantry |
 | **Meal Plan UX** | Static weekly list view | **Active Day View** — per-slot cards (Breakfast/Lunch/Dinner/Snack) with add from recipe bank, regenerate with AI, swap, or plan the full day with AI in one tap |
-| **Multi-Image Chat** | Single image attachment | **Batch Gallery Selection** — multi-image attachment tray with Gemini multimodal reasoning across all photos in one message |
+| **Multi-Image Chat** | Single image attachment | **Batch Gallery Selection** — multi-image attachment tray with `gemini-3.8-flash` multimodal reasoning across all photos in one message |
 | **Chat Memory** | Single-turn only | **Multi-Turn Conversational Memory** — 10-turn sliding window with persona context and photo references for genuine follow-up conversations |
 
 ---
