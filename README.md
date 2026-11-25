@@ -51,8 +51,44 @@ In accordance with official hackathon rules for existing projects, the table bel
 | **Pantry Intake** | Manual typing only | **Receipt Scanner $\rightarrow$ Auto-Pantry** (Multimodal Gemini 3.8 Flash auto-extracting items & shelf-life) |
 | **Recipe Adaptation** | Static recipes | **One-Tap Recipe Transforms & Scaler** (Gemini Nano on-device: Vegan, High-Protein, Budget + dynamic scaler) |
 | **Cooking Guidance** | Static step text | **Embedded Smart Cooking Timers** (Regex duration detection, circular countdown ring, audio-haptic alerts) |
-| **Grocery Planning** | Manual list entry | **Smart Missing-Item Grocery Sync** (Cross-checks 7-day meal plan against active pantry stock) |
-| **Autonomous Agent** | None (Passive chat only) | **Autonomous Kitchen Agent Dispatcher** (Gemini Nano tool calling across Voice & Chat: timers, groceries, pantry, meal slots) |
+| **Grocery Planning** | Manual list entry | **Smart AI Grocery Sync** — Hybrid AI parses the meal plan, extracts real ingredients, deduplicates, and outputs a clean shopping list cross-checked against pantry stock |
+| **Receipt Scanner → Auto-Pantry** | Manual pantry entry | **Scan Supermarket Receipt with Hybrid AI** — photo or gallery upload; Gemini 3.8 Flash OCR extracts items + shelf-life and auto-populates pantry |
+| **Meal Plan UX** | Static weekly list view | **Active Day View** — per-slot cards (Breakfast/Lunch/Dinner/Snack) with add from recipe bank, regenerate with AI, swap, or plan the full day with AI in one tap |
+| **Multi-Image Chat** | Single image attachment | **Batch Gallery Selection** — multi-image attachment tray with Gemini multimodal reasoning across all photos in one message |
+| **Chat Memory** | Single-turn only | **Multi-Turn Conversational Memory** — 10-turn sliding window with persona context and photo references for genuine follow-up conversations |
+
+---
+
+## ✨ Recent Improvements (Post-Hackathon Polish)
+
+### 🗓️ Meal Plan Screen — Full UX Redesign
+- **Active Day View**: Calendar week strip (Mon–Sun) with today highlighted; tapping a day switches the slot view instantly.
+- **Slot Cards**: Each meal slot (🌅 Breakfast / ☀️ Lunch / 🌙 Dinner / 🍿 Snack) shows as a card. Empty slots show an "Add" prompt; filled slots show the meal name + macros.
+- **Tap Empty Slot** → Sheet opens with two options:
+  - 🔍 Search & pick from your Recipe Bank
+  - ✨ Generate with AI for that specific meal slot
+- **Tap Filled Slot** → Options sheet: Swap from recipe bank · Regenerate with AI · Remove meal
+- **"Plan Day with AI"** button → Hybrid AI generates a complete 4-slot day plan in one tap.
+- **"Manage Day"** button → Detail sheet with all current day meals and bulk actions.
+- **Empty week**: Day slots and all action buttons always visible — no more "No meals planned yet" dead-end screen.
+
+### 🛒 Smart Grocery List — Hybrid AI Normalization
+- Hybrid AI parses every meal in the plan, extracts real ingredients, deduplicates, and outputs a clean shopping list (e.g. `Chicken breast`, `Olive oil`, `Brown rice`) — no more raw preparation strings from recipe text.
+- Falls back to `_normalizeGroceryItem()` heuristic cleaner if AI is unavailable.
+
+### 🧾 Receipt Scanner → Auto-Pantry
+- Tap the scan icon on the Pantry screen to photograph or upload a supermarket receipt.
+- Gemini 3.8 Flash (Cloud) performs multimodal OCR, extracts grocery items and estimated shelf-life, and auto-populates your pantry — no manual entry needed.
+
+### 📅 Diet Plan Screen — Weekly Plan Polish
+- **Date range banner**: Collapsed plan shows e.g. `Nov 24 – Nov 30 • 7-Day Plan (21 Meals)`.
+- **Close button** to dismiss the weekly plan card cleanly.
+- **Apply Plan to Calendar**: Creates proper Recipe rows in SQLite per meal (with ingredients) before inserting `MealPlanEntry` — fixes the previous 0-item grocery list bug.
+- **No meal duplication**: Applying a plan now clears that week's existing entries first.
+
+### 💬 AI Chat — Conversational Memory & Multi-Image
+- **10-turn sliding window** with explicit persona instruction and photo references for true multi-turn memory.
+- **Batch multi-image attachment** tray: pick multiple photos from gallery, send all to Gemini multimodal in one message.
 
 ---
 
