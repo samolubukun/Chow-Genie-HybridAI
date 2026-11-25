@@ -74,16 +74,24 @@ class ModelManager extends ChangeNotifier {
 
   /// Multimodal Route: Firebase AI Logic Hybrid Inference (Gemini 3.8 Flash / Gemini Nano Vision)
   Future<String?> generateMultimodalResponse(
-    String prompt, {
-    Uint8List? imageBytes,
-    List<Uint8List>? multipleImageBytes,
+    String prompt,
+    dynamic imageInput, {
     List<ChatMessage> history = const [],
   }) async {
+    Uint8List? singleBytes;
+    List<Uint8List>? multiBytes;
+
+    if (imageInput is Uint8List) {
+      singleBytes = imageInput;
+    } else if (imageInput is List<Uint8List>) {
+      multiBytes = imageInput;
+    }
+
     try {
       final hybridResult = await HybridAiService.instance.generateContent(
         prompt: prompt,
-        imageBytes: imageBytes,
-        multipleImageBytes: multipleImageBytes,
+        imageBytes: singleBytes,
+        multipleImageBytes: multiBytes,
       );
       _latestExecutionMode = hybridResult.executionMode;
       _latestLatencyMs = hybridResult.latencyMs;

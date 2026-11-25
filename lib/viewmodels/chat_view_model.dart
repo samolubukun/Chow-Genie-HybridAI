@@ -198,7 +198,7 @@ class ChatViewModel extends ChangeNotifier {
 
       final response = await _modelManager.generateMultimodalResponse(
         prompt,
-        multipleImageBytes: allBytes,
+        allBytes,
         history: history,
       );
       if (response != null) {
