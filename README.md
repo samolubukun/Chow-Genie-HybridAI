@@ -18,7 +18,7 @@ ChowGenie is an AI-powered kitchen companion app built with Flutter that helps y
   <img src="https://img.shields.io/badge/Gemini_3.8_Flash-Cloud_Fallback-34A853?style=for-the-badge&logo=google" alt="Gemini Flash" />
   <img src="https://img.shields.io/badge/Flutter-3.24%2B-02569B?style=for-the-badge&logo=flutter" alt="Flutter" />
   <img src="https://img.shields.io/badge/Platform-Android%20%7C%20Web-3DDC84?style=for-the-badge&logo=android" alt="Android & Web" />
-  <img src="https://img.shields.io/badge/IDE-Google_Antigravity-8E24AA?style=for-the-badge" alt="Google Antigravity" />
+  <a href="https://github.com/samolubukun/Chow-Genie-HybridAI/releases/download/v2.0.0/app-arm64-v8a-release.apk"><img src="https://img.shields.io/badge/Download_APK-Android_(arm64)-E65100?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" /></a>
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License" />
 </p>
 
@@ -195,9 +195,12 @@ flutter run -d web-server --web-port=8080 --web-hostname=0.0.0.0
 
 ## Releases & Downloads
 
-Pre-built Android APKs are generated automatically by GitHub Actions on each release and push:
-- Go to the **Releases** tab on GitHub to download the latest signed APKs (`arm64-v8a`, `armeabi-v7a`, `x86_64`).
-- Alternatively, check the **Actions** tab to download artifacts from the latest workflow runs.
+[![Download APK](https://img.shields.io/badge/Download_APK-Android_(arm64)--v8a-E65100?style=for-the-badge&logo=android&logoColor=white)](https://github.com/samolubukun/Chow-Genie-HybridAI/releases/download/v2.0.0/app-arm64-v8a-release.apk)
+
+- **Direct Download (Main APK):** [app-arm64-v8a-release.apk](https://github.com/samolubukun/Chow-Genie-HybridAI/releases/download/v2.0.0/app-arm64-v8a-release.apk) (67.8 MB)
+- **All Releases & Other Architectures:** [GitHub Releases](https://github.com/samolubukun/Chow-Genie-HybridAI/releases/latest)
+
+> Fully preloaded with the complete feature suite (Hybrid AI, Recipe Bank with 73,322 offline recipes, Voice cooking, Timers, and Camera Scanners) — no initial data download needed.
 
 ---
 
