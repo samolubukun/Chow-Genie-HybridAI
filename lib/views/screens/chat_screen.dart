@@ -460,11 +460,9 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                         if (!isUser) ...[
                           const SizedBox(width: 8),
-                          Consumer<ModelManager>(
-                            builder: (_, mm, __) => HybridAiBadge(
-                              isOnDevice: mm.isLatestOnDevice,
-                              modelName: mm.latestModelName,
-                            ),
+                          HybridAiBadge(
+                            isOnDevice: msg.isOnDevice ?? false,
+                            modelName: msg.modelName ?? 'Gemini Flash',
                           ),
                         ],
                       ],

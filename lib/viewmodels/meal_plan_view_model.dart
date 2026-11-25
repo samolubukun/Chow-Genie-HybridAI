@@ -72,19 +72,46 @@ class MealPlanViewModel extends ChangeNotifier {
     }
   }
 
+  Future<int> applyWeeklyPlanEntries(List<MealPlanEntry> entries) async {
+    for (final entry in entries) {
+      await _db.insertMealPlanEntry(entry);
+    }
+    await loadWeek();
+    return entries.length;
+  }
+
   Future<String> generateWeeklyPlan(UserProfile? profile) async {
     _isGenerating = true;
     _generatedPlan = null;
     notifyListeners();
 
     try {
-      String prompt = 'Generate a weekly meal plan (Monday to Sunday) with '
-          'breakfast, lunch, dinner, and snack for each day. Format: '
-          '[Day]\nBreakfast: [meal]\nLunch: [meal]\nDinner: [meal]\nSnack: [snack]\n';
+      String prompt = '''You are ChowGenie, an expert AI culinary nutritionist.
+Generate a structured, personalized 7-day weekly meal plan (Monday to Sunday) with Breakfast, Lunch, Dinner, and Snack for each day.
+Format each day strictly like this:
+
+### Monday
+- Breakfast: [Meal Name & Brief Description]
+- Lunch: [Meal Name & Brief Description]
+- Dinner: [Meal Name & Brief Description]
+- Snack: [Healthy Snack]
+
+### Tuesday
+- Breakfast: [Meal Name & Brief Description]
+- Lunch: [Meal Name & Brief Description]
+- Dinner: [Meal Name & Brief Description]
+- Snack: [Healthy Snack]
+
+(Repeat strictly for Wednesday, Thursday, Friday, Saturday, Sunday)
+Make all meals creative, balanced, delicious, and strictly aligned with user preferences.
+''';
 
       if (profile != null) {
         prompt += '\nUser profile: ${profile.healthSummary}';
         prompt += '\nDiet preferences: ${profile.dietaryPreferences.join(", ")}';
+        if (profile.allergies.isNotEmpty) {
+          prompt += '\nAllergies to strictly avoid: ${profile.allergies.join(", ")}';
+        }
       }
 
       final response = await _modelManager.generateResponse(prompt);
@@ -96,10 +123,10 @@ class MealPlanViewModel extends ChangeNotifier {
       }
     } catch (e) {
       _generatedPlan = 'Error: $e';
+    } finally {
+      _isGenerating = false;
+      notifyListeners();
     }
-
-    _isGenerating = false;
-    notifyListeners();
     return _generatedPlan ?? '';
   }
 

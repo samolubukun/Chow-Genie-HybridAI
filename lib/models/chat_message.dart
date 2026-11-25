@@ -6,6 +6,8 @@ class ChatMessage {
   final MessageType type;
   final DateTime timestamp;
   final String? imagePath;
+  final String? modelName;
+  final bool? isOnDevice;
 
   const ChatMessage({
     required this.id,
@@ -13,6 +15,8 @@ class ChatMessage {
     required this.type,
     required this.timestamp,
     this.imagePath,
+    this.modelName,
+    this.isOnDevice,
   });
 
   factory ChatMessage.user({required String content, String? imagePath}) =>
@@ -24,12 +28,18 @@ class ChatMessage {
         imagePath: imagePath,
       );
 
-  factory ChatMessage.ai({required String content}) =>
+  factory ChatMessage.ai({
+    required String content,
+    String? modelName,
+    bool? isOnDevice,
+  }) =>
       ChatMessage(
         id: DateTime.now().microsecondsSinceEpoch.toString(),
         content: content,
         type: MessageType.ai,
         timestamp: DateTime.now(),
+        modelName: modelName,
+        isOnDevice: isOnDevice,
       );
 
   factory ChatMessage.system({required String content}) =>
@@ -46,6 +56,8 @@ class ChatMessage {
     'type': type.name,
     'timestamp': timestamp.toIso8601String(),
     'imagePath': imagePath,
+    'modelName': modelName,
+    'isOnDevice': isOnDevice,
   };
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
@@ -57,6 +69,8 @@ class ChatMessage {
     ),
     timestamp: DateTime.parse(json['timestamp'] ?? DateTime.now().toIso8601String()),
     imagePath: json['imagePath'],
+    modelName: json['modelName'] as String?,
+    isOnDevice: json['isOnDevice'] as bool?,
   );
 
   bool get hasImage => imagePath != null;

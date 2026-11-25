@@ -116,7 +116,11 @@ class ChatViewModel extends ChangeNotifier {
       // 1. Process via Kitchen Agent (Timer, Shopping List, Pantry, Meal Planner actions)
       final agentResponse = await KitchenAgentService.instance.processCommand(content.trim());
       if (agentResponse.actionType != AgentActionType.none) {
-        _messages.add(ChatMessage.ai(content: agentResponse.displayText));
+        _messages.add(ChatMessage.ai(
+          content: agentResponse.displayText,
+          modelName: _modelManager.latestModelName,
+          isOnDevice: _modelManager.isLatestOnDevice,
+        ));
       } else {
         // 2. Fall back to standard conversational response
         final response = await _modelManager.generateResponse(
@@ -124,7 +128,11 @@ class ChatViewModel extends ChangeNotifier {
           history: history,
         );
         if (response != null) {
-          _messages.add(ChatMessage.ai(content: response));
+          _messages.add(ChatMessage.ai(
+            content: response,
+            modelName: _modelManager.latestModelName,
+            isOnDevice: _modelManager.isLatestOnDevice,
+          ));
         } else {
           _setError('Failed to generate response');
         }
@@ -176,7 +184,11 @@ class ChatViewModel extends ChangeNotifier {
         history: history,
       );
       if (response != null) {
-        _messages.add(ChatMessage.ai(content: response));
+        _messages.add(ChatMessage.ai(
+          content: response,
+          modelName: _modelManager.latestModelName,
+          isOnDevice: _modelManager.isLatestOnDevice,
+        ));
       } else {
         _setError('Failed to generate response');
       }

@@ -29,7 +29,7 @@ class ModelManager extends ChangeNotifier {
   bool get supportsImages => true;
 
   // Firebase AI Logic Hybrid Inference State (#BuildHybridAI 2026)
-  String _latestExecutionMode = 'on_device_gemini_nano';
+  String _latestExecutionMode = 'cloud_fallback';
   int _latestLatencyMs = 95;
   String _latestModelName = 'Gemini 3.8 Flash';
 
