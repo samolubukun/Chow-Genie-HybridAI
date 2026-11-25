@@ -27,6 +27,25 @@ class ImageService {
     return null;
   }
 
+  Future<List<String>> pickMultipleFromGallery() async {
+    try {
+      final List<XFile> images = await _picker.pickMultiImage(
+        maxWidth: _maxWidth.toDouble(),
+        maxHeight: _maxHeight.toDouble(),
+        imageQuality: _quality,
+      );
+      final paths = <String>[];
+      for (final image in images) {
+        final path = await _processAndSave(image);
+        if (path != null) paths.add(path);
+      }
+      return paths;
+    } catch (e) {
+      debugPrint('pickMultipleFromGallery error: $e');
+    }
+    return [];
+  }
+
   Future<String?> pickFromCamera() async {
     try {
       final XFile? image = await _picker.pickImage(

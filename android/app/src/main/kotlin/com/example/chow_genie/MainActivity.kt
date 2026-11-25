@@ -167,6 +167,8 @@ class MainActivity: FlutterActivity() {
                 "generateHybridPrompt" -> {
                     val prompt = call.argument<String>("prompt") ?: ""
                     val imageBase64 = call.argument<String>("imageBase64")
+                    val imagesBase64 = call.argument<List<String>>("imagesBase64")
+                    val allImages = if (!imagesBase64.isNullOrEmpty()) imagesBase64 else listOfNotNull(imageBase64)
                     val startTime = System.currentTimeMillis()
 
                     CoroutineScope(Dispatchers.Main).launch {
@@ -194,18 +196,26 @@ class MainActivity: FlutterActivity() {
                                     )
 
                                 val text = withContext(Dispatchers.IO) {
-                                    if (imageBase64 != null && imageBase64.isNotEmpty()) {
-                                        val imageBytes = Base64.decode(imageBase64, Base64.DEFAULT)
-                                        val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                                        BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, boundsOptions)
-                                        var inSample = 1
-                                        while (boundsOptions.outWidth / inSample > 1024 || boundsOptions.outHeight / inSample > 1024) {
-                                            inSample *= 2
+                                    if (allImages.isNotEmpty()) {
+                                        val bitmaps = mutableListOf<Bitmap>()
+                                        for (imgStr in allImages) {
+                                            val imageBytes = Base64.decode(imgStr, Base64.DEFAULT)
+                                            val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                                            BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, boundsOptions)
+                                            var inSample = 1
+                                            while (boundsOptions.outWidth / inSample > 1024 || boundsOptions.outHeight / inSample > 1024) {
+                                                inSample *= 2
+                                            }
+                                            val decodeOptions = BitmapFactory.Options().apply { inSampleSize = inSample }
+                                            val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, decodeOptions)
+                                            if (bitmap != null) {
+                                                bitmaps.add(bitmap)
+                                            }
                                         }
-                                        val decodeOptions = BitmapFactory.Options().apply { inSampleSize = inSample }
-                                        val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, decodeOptions)
                                         val inputContent = content {
-                                            image(bitmap)
+                                            for (bmp in bitmaps) {
+                                                image(bmp)
+                                            }
                                             text(prompt)
                                         }
                                         currentModel.generateContent(inputContent).text

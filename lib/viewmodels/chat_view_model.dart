@@ -146,9 +146,18 @@ class ChatViewModel extends ChangeNotifier {
     await _saveCurrentSessionMessages();
   }
 
-  Future<void> sendMultimodalMessage(String content, String imagePath) async {
+  Future<void> sendMultimodalMessage(
+    String content,
+    String? imagePath, {
+    List<String> imagePaths = const [],
+  }) async {
     if (_isGenerating) return;
     _errorMessage = null;
+
+    final effectivePaths = imagePaths.isNotEmpty
+        ? imagePaths
+        : (imagePath != null ? [imagePath] : <String>[]);
+    if (effectivePaths.isEmpty) return;
 
     final List<ChatMessage> history = [];
     history.add(ChatMessage.system(
@@ -156,12 +165,16 @@ class ChatViewModel extends ChangeNotifier {
     ));
     history.addAll(_messages);
 
-    final userMsg = ChatMessage.user(content: content.trim(), imagePath: imagePath);
+    final userMsg = ChatMessage.user(
+      content: content.trim(),
+      imagePath: effectivePaths.first,
+      imagePaths: effectivePaths,
+    );
     _messages.add(userMsg);
     notifyListeners();
 
     if (_currentSession != null && _currentSession!.title == 'New Chat' && _messages.length == 1) {
-      final firstMsg = content.trim().isEmpty ? "Analyzed Image" : content.trim();
+      final firstMsg = content.trim().isEmpty ? "Analyzed Images" : content.trim();
       final words = firstMsg.split(' ');
       final title = words.take(4).join(' ') + (words.length > 4 ? '...' : '');
       _currentSession!.title = title;
@@ -172,15 +185,20 @@ class ChatViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final bytes = await _imageService.getBytes(imagePath);
-      if (bytes == null) throw Exception('Failed to read image');
+      final List<Uint8List> allBytes = [];
+      for (final path in effectivePaths) {
+        final b = await _imageService.getBytes(path);
+        if (b != null) allBytes.add(b);
+      }
+      if (allBytes.isEmpty) throw Exception('Failed to read image bytes');
 
       final prompt = content.trim().isEmpty
-          ? 'Analyze this food image in detail. Identify all food items, estimate portions, and provide nutritional information.'
+          ? 'Analyze these food images in detail. Identify all ingredients and dishes, estimate portions, and provide nutritional and culinary insights.'
           : content.trim();
 
       final response = await _modelManager.generateMultimodalResponse(
-        prompt, bytes,
+        prompt,
+        multipleImageBytes: allBytes,
         history: history,
       );
       if (response != null) {
@@ -203,6 +221,10 @@ class ChatViewModel extends ChangeNotifier {
 
   Future<String?> pickImage() async {
     return await _imageService.pickFromGallery();
+  }
+
+  Future<List<String>> pickMultipleImages() async {
+    return await _imageService.pickMultipleFromGallery();
   }
 
   Future<String?> takePhoto() async {

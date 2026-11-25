@@ -72,16 +72,18 @@ class ModelManager extends ChangeNotifier {
     }
   }
 
-  /// Multimodal Route: Firebase AI Logic Hybrid Inference (Gemini 3.5 Flash / Gemini Nano Vision)
+  /// Multimodal Route: Firebase AI Logic Hybrid Inference (Gemini 3.8 Flash / Gemini Nano Vision)
   Future<String?> generateMultimodalResponse(
-    String prompt,
-    Uint8List imageBytes, {
+    String prompt, {
+    Uint8List? imageBytes,
+    List<Uint8List>? multipleImageBytes,
     List<ChatMessage> history = const [],
   }) async {
     try {
       final hybridResult = await HybridAiService.instance.generateContent(
         prompt: prompt,
         imageBytes: imageBytes,
+        multipleImageBytes: multipleImageBytes,
       );
       _latestExecutionMode = hybridResult.executionMode;
       _latestLatencyMs = hybridResult.latencyMs;
@@ -92,7 +94,7 @@ class ModelManager extends ChangeNotifier {
       if (kDebugMode) {
         print('[ModelManager] Multimodal Hybrid AI call redirected: $e');
       }
-      return 'I received your dish photo. Let me assist you with recipe and nutritional insights.';
+      return 'I received your dish photos. Let me assist you with recipe and nutritional insights.';
     }
   }
 

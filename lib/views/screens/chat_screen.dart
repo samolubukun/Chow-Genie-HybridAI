@@ -26,7 +26,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _showScrollBtn = false;
   int _lastMessageCount = 0;
   String? _lastSessionId;
-  String? _pendingImagePath;
+  final List<String> _pendingImagePaths = [];
 
   @override
   void initState() {
@@ -257,7 +257,7 @@ class _ChatScreenState extends State<ChatScreen> {
         final countChanged = vm.messages.length != _lastMessageCount;
 
         if (sessionChanged) {
-          _pendingImagePath = null;
+          _pendingImagePaths.clear();
           _lastSessionId = currentSessionId;
           _lastMessageCount = vm.messages.length;
           if (vm.messages.isNotEmpty) {
@@ -392,21 +392,10 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (msg.hasImage && msg.imagePath != null)
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Image.file(
-                            File(msg.imagePath!),
-                            height: 160,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              height: 100, color: colors.surfaceAlt,
-                              child: Center(child: Icon(Icons.broken_image, color: colors.textTertiary)),
-                            ),
-                          ),
-                        ),
-                      if (msg.hasImage && msg.imagePath != null) const SizedBox(height: 10),
+                      if (msg.hasImage) ...[
+                        _buildMessageMediaGallery(msg, colors),
+                        const SizedBox(height: 10),
+                      ],
                       if (msg.content.isNotEmpty)
                         isUser
                             ? Text(msg.content, style: AppTextStyles.bodyLarge)
@@ -489,10 +478,54 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  Widget _buildMessageMediaGallery(ChatMessage msg, AppColorSet colors) {
+    final paths = msg.allImagePaths;
+    if (paths.isEmpty) return const SizedBox.shrink();
+    if (paths.length == 1) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.file(
+          File(paths.first),
+          height: 160,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            height: 100,
+            color: colors.surfaceAlt,
+            child: Center(child: Icon(Icons.broken_image, color: colors.textTertiary)),
+          ),
+        ),
+      );
+    }
+    return SizedBox(
+      height: 110,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: paths.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (ctx, idx) => ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.file(
+            File(paths[idx]),
+            height: 110,
+            width: 110,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              height: 110,
+              width: 110,
+              color: colors.surfaceAlt,
+              child: Center(child: Icon(Icons.broken_image, color: colors.textTertiary)),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildInputBar(ChatViewModel vm, AppColorSet colors) {
     final hasText = _controller.text.trim().isNotEmpty;
-    final hasImage = _pendingImagePath != null;
-    final canSend = (hasText || hasImage) && !vm.isGenerating;
+    final hasImages = _pendingImagePaths.isNotEmpty;
+    final canSend = (hasText || hasImages) && !vm.isGenerating;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -506,59 +539,127 @@ class _ChatScreenState extends State<ChatScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (_pendingImagePath != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10, left: 4),
-                child: Stack(
-                  clipBehavior: Clip.none,
+            // ATTACHMENT TRAY / STAGING CAROUSEL
+            if (_pendingImagePaths.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.brand.withValues(alpha: 0.4), width: 1.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
+                    Row(
+                      children: [
+                        const Icon(Icons.collections_rounded, size: 14, color: AppColors.brand),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${_pendingImagePaths.length} ${_pendingImagePaths.length == 1 ? "Photo" : "Photos"} attached',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.brand,
                           ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.file(
-                          File(_pendingImagePath!),
-                          height: 72,
-                          width: 72,
-                          fit: BoxFit.cover,
                         ),
-                      ),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () => setState(() => _pendingImagePaths.clear()),
+                          child: Text(
+                            'Clear all',
+                            style: TextStyle(fontSize: 11, color: colors.textTertiary),
+                          ),
+                        ),
+                      ],
                     ),
-                    Positioned(
-                      top: -6,
-                      right: -6,
-                      child: GestureDetector(
-                        onTap: () => setState(() => _pendingImagePath = null),
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: colors.cardElevated,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: colors.border),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.2),
-                                blurRadius: 4,
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 74,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _pendingImagePaths.length + 1,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) {
+                          if (index == _pendingImagePaths.length) {
+                            return GestureDetector(
+                              onTap: vm.isGenerating ? null : _showImageSourceSheet,
+                              child: Container(
+                                width: 68,
+                                height: 74,
+                                decoration: BoxDecoration(
+                                  color: colors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: colors.border,
+                                    style: BorderStyle.solid,
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.add_photo_alternate_outlined, size: 20, color: colors.textSecondary),
+                                    const SizedBox(height: 4),
+                                    Text('Add', style: TextStyle(fontSize: 11, color: colors.textSecondary)),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
+
+                          final path = _pendingImagePaths[index];
+                          return Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                width: 68,
+                                height: 74,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppColors.brand.withValues(alpha: 0.35), width: 1.5),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.08),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.file(
+                                    File(path),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                top: -6,
+                                right: -6,
+                                child: GestureDetector(
+                                  onTap: () => setState(() => _pendingImagePaths.removeAt(index)),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(3),
+                                    decoration: BoxDecoration(
+                                      color: colors.cardElevated,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: colors.border),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.2),
+                                          blurRadius: 3,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(Icons.close_rounded, size: 12, color: colors.textPrimary),
+                                  ),
+                                ),
                               ),
                             ],
-                          ),
-                          child: Icon(Icons.close_rounded, size: 14, color: colors.textPrimary),
-                        ),
+                          );
+                        },
                       ),
                     ),
                   ],
                 ),
               ),
+
             Row(
               children: [
                 GestureDetector(
@@ -566,14 +667,14 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: _pendingImagePath != null
+                      color: hasImages
                           ? AppColors.brand.withValues(alpha: 0.15)
                           : colors.surfaceAlt,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       Icons.add_photo_alternate_outlined,
-                      color: _pendingImagePath != null ? AppColors.brand : colors.textSecondary,
+                      color: hasImages ? AppColors.brand : colors.textSecondary,
                       size: 20,
                     ),
                   ),
@@ -589,8 +690,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     decoration: InputDecoration(
                       hintText: vm.isGenerating
                           ? 'AI is thinking...'
-                          : (_pendingImagePath != null
-                              ? 'Ask about this photo (or send)...'
+                          : (hasImages
+                              ? 'Ask about ${_pendingImagePaths.length == 1 ? "this photo" : "these ${_pendingImagePaths.length} photos"}...'
                               : 'Ask about food...'),
                       filled: true,
                       fillColor: colors.surfaceAlt,
@@ -638,17 +739,20 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _sendMessage(ChatViewModel vm) {
     final text = _controller.text.trim();
-    final imagePath = _pendingImagePath;
-    if (text.isEmpty && imagePath == null) return;
+    final images = List<String>.from(_pendingImagePaths);
+    if (text.isEmpty && images.isEmpty) return;
 
     _controller.clear();
-    setState(() => _pendingImagePath = null);
+    setState(() => _pendingImagePaths.clear());
     _scrollToBottom(animate: true);
 
-    if (imagePath != null) {
+    if (images.isNotEmpty) {
       vm.sendMultimodalMessage(
-        text.isEmpty ? 'Analyze this food photo and provide recipe and nutrition insights.' : text,
-        imagePath,
+        text.isEmpty
+            ? 'Analyze ${images.length == 1 ? "this food photo" : "these food photos"} and provide recipe and nutrition insights.'
+            : text,
+        images.first,
+        imagePaths: images,
       );
     } else {
       vm.sendMessage(text);
@@ -678,7 +782,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              Text('Attach a Photo', style: AppTextStyles.heading2),
+              Text('Attach Photos', style: AppTextStyles.heading2),
               const SizedBox(height: 20),
               Row(
                 children: [
@@ -692,7 +796,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         final path = await vm.takePhoto();
                         if (path != null) {
                           setState(() {
-                            _pendingImagePath = path;
+                            _pendingImagePaths.add(path);
                           });
                         }
                       },
@@ -706,10 +810,10 @@ class _ChatScreenState extends State<ChatScreen> {
                       label: 'Gallery',
                       onTap: () async {
                         Navigator.pop(ctx);
-                        final path = await vm.pickImage();
-                        if (path != null) {
+                        final paths = await vm.pickMultipleImages();
+                        if (paths.isNotEmpty) {
                           setState(() {
-                            _pendingImagePath = path;
+                            _pendingImagePaths.addAll(paths);
                           });
                         }
                       },

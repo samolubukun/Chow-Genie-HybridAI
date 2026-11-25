@@ -68,24 +68,28 @@ class HybridAiService {
   Future<HybridAiResult> generateContent({
     required String prompt,
     Uint8List? imageBytes,
+    List<Uint8List>? multipleImageBytes,
   }) async {
     final stopwatch = Stopwatch()..start();
 
     if (kIsWeb) {
       return _generateOnWeb(prompt, imageBytes, stopwatch);
     } else {
-      return _generateOnAndroid(prompt, imageBytes, stopwatch);
+      return _generateOnAndroid(prompt, imageBytes, multipleImageBytes, stopwatch);
     }
   }
 
   Future<HybridAiResult> _generateOnAndroid(
     String prompt,
     Uint8List? imageBytes,
+    List<Uint8List>? multipleImageBytes,
     Stopwatch stopwatch,
   ) async {
     try {
       final Map<String, dynamic> arguments = {'prompt': prompt};
-      if (imageBytes != null && imageBytes.isNotEmpty) {
+      if (multipleImageBytes != null && multipleImageBytes.isNotEmpty) {
+        arguments['imagesBase64'] = multipleImageBytes.map((b) => base64Encode(b)).toList();
+      } else if (imageBytes != null && imageBytes.isNotEmpty) {
         arguments['imageBase64'] = base64Encode(imageBytes);
       }
 
