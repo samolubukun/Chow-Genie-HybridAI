@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:uuid/uuid.dart';
@@ -435,51 +436,80 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
     }
 
     final totalMeals = days.values.fold<int>(0, (sum, list) => sum + list.length);
+    final weekStart = vm.currentWeekStart;
+    final weekEnd = weekStart.add(const Duration(days: 6));
+    final dateRangeStr = '${DateFormat('MMM d').format(weekStart)} – ${DateFormat('MMM d').format(weekEnd)}';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        InkWell(
-          onTap: () => setState(() => _isPlanExpanded = !_isPlanExpanded),
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              children: [
-                const Icon(Icons.auto_awesome, color: AppColors.brand, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'Your Weekly Plan',
-                  style: AppTextStyles.heading2.copyWith(color: colors.textPrimary),
-                ),
-                const SizedBox(width: 8),
-                if (totalMeals > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.brand.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(top: 2),
+                child: Icon(Icons.auto_awesome, color: AppColors.brand, size: 20),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            'Your Weekly Plan',
+                            style: AppTextStyles.heading2.copyWith(color: colors.textPrimary),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (totalMeals > 0) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.brand.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '$totalMeals meals',
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brand),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    child: Text(
-                      '$totalMeals meals',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brand),
+                    const SizedBox(height: 4),
+                    Consumer<ModelManager>(
+                      builder: (_, mm, __) => HybridAiBadge(
+                        isOnDevice: mm.isLatestOnDevice,
+                        modelName: mm.latestModelName,
+                      ),
                     ),
-                  ),
-                const Spacer(),
-                Consumer<ModelManager>(
-                  builder: (_, mm, __) => HybridAiBadge(
-                    isOnDevice: mm.isLatestOnDevice,
-                    modelName: mm.latestModelName,
-                  ),
+                  ],
                 ),
-                const SizedBox(width: 4),
-                Icon(
+              ),
+              IconButton(
+                tooltip: _isPlanExpanded ? 'Collapse plan' : 'Expand plan',
+                icon: Icon(
                   _isPlanExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
                   color: colors.textSecondary,
                   size: 24,
                 ),
-              ],
-            ),
+                onPressed: () => setState(() => _isPlanExpanded = !_isPlanExpanded),
+              ),
+              IconButton(
+                tooltip: 'Close plan',
+                icon: Icon(Icons.close_rounded, color: colors.textSecondary, size: 20),
+                onPressed: () async {
+                  await vm.clearGeneratedPlan();
+                },
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 12),
@@ -502,7 +532,7 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Saved 7-Day Plan ($totalMeals Meals)',
+                        '$dateRangeStr • 7-Day Plan ($totalMeals Meals)',
                         style: AppTextStyles.labelLarge.copyWith(color: colors.textPrimary),
                       ),
                       Text(
@@ -558,7 +588,7 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '7-Day Plan Generated ($totalMeals Meals)',
+                              '$dateRangeStr • 7-Day Plan ($totalMeals Meals)',
                               style: AppTextStyles.labelLarge.copyWith(color: colors.textPrimary, fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 2),
@@ -574,14 +604,14 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
-                    height: 44,
                     child: ElevatedButton.icon(
                       onPressed: () => _applyPlanToCalendar(context, vm, days),
-                      icon: const Icon(Icons.add_task_rounded, size: 18),
+                      icon: const Icon(Icons.add_task_rounded, size: 20),
                       label: const Text('Apply Plan to Weekly Calendar', style: TextStyle(fontWeight: FontWeight.bold)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.brand,
                         foregroundColor: colors.textOnBrand,
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
                       ),

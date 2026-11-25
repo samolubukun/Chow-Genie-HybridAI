@@ -55,16 +55,39 @@ class ModelManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  String _formatConversationPrompt(String prompt, List<ChatMessage> history) {
+    if (history.isEmpty) return prompt;
+
+    final nonSystem = history.where((m) => m.type != MessageType.system).toList();
+    if (nonSystem.isEmpty) return prompt;
+
+    final buffer = StringBuffer();
+    buffer.writeln('You are ChowGenie, an expert AI chef and nutritionist. Continue the ongoing conversation with the user naturally.');
+    buffer.writeln('You have full memory of everything discussed and any food photos shared previously in this conversation.');
+    buffer.writeln();
+    buffer.writeln('--- Conversation History ---');
+    for (final m in nonSystem.length > 10 ? nonSystem.sublist(nonSystem.length - 10) : nonSystem) {
+      final role = m.type == MessageType.user ? 'User' : 'ChowGenie';
+      String text = m.content.trim();
+      final hasPhoto = (m.imagePath != null && m.imagePath!.isNotEmpty) || m.imagePaths.isNotEmpty;
+      if (hasPhoto && text.isEmpty) {
+        text = '[Shared food photo(s)]';
+      } else if (hasPhoto) {
+        text = '[Shared food photo(s)] $text';
+      }
+      buffer.writeln('$role: $text');
+    }
+    buffer.writeln('--- End History ---');
+    buffer.writeln();
+    buffer.writeln('User follow-up: $prompt');
+    buffer.writeln('Answer the user directly and helpfully using the context above.');
+    return buffer.toString();
+  }
+
   /// Primary Route: Firebase AI Logic Hybrid Inference (On-Device Gemini Nano + Cloud Fallback)
   Future<String?> generateResponse(String prompt, {List<ChatMessage> history = const []}) async {
     try {
-      final context = history
-          .where((message) => message.type != MessageType.system)
-          .map((message) => '${message.type == MessageType.user ? 'User' : 'ChowGenie'}: ${message.content}')
-          .join('\n');
-      final contextualPrompt = context.isEmpty
-          ? prompt
-          : 'Conversation context:\n$context\n\nCurrent user message:\n$prompt';
+      final contextualPrompt = _formatConversationPrompt(prompt, history);
       final hybridResult = await HybridAiService.instance.generateContent(prompt: contextualPrompt);
       _latestExecutionMode = hybridResult.executionMode;
       _latestLatencyMs = hybridResult.latencyMs;
@@ -95,13 +118,7 @@ class ModelManager extends ChangeNotifier {
     }
 
     try {
-      final context = history
-          .where((message) => message.type != MessageType.system)
-          .map((message) => '${message.type == MessageType.user ? 'User' : 'ChowGenie'}: ${message.content}')
-          .join('\n');
-      final contextualPrompt = context.isEmpty
-          ? prompt
-          : 'Conversation context:\n$context\n\nCurrent user message:\n$prompt';
+      final contextualPrompt = _formatConversationPrompt(prompt, history);
       final hybridResult = await HybridAiService.instance.generateContent(
         prompt: contextualPrompt,
         imageBytes: singleBytes,

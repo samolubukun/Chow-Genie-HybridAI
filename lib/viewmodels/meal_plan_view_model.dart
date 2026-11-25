@@ -80,6 +80,12 @@ class MealPlanViewModel extends ChangeNotifier {
     return entries.length;
   }
 
+  Future<void> clearGeneratedPlan() async {
+    _generatedPlan = null;
+    await _db.saveGeneratedWeeklyPlan(_currentWeekStart, '');
+    notifyListeners();
+  }
+
   Future<String> generateWeeklyPlan(UserProfile? profile) async {
     _isGenerating = true;
     _generatedPlan = null;

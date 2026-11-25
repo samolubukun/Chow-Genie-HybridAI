@@ -995,12 +995,17 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: colors.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
+      builder: (ctx) => ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+        ),
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1033,34 +1038,29 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
               if (missing.isNotEmpty) ...[
                 Text('Added Items:', style: AppTextStyles.labelMedium.copyWith(color: colors.textTertiary)),
                 const SizedBox(height: 8),
-                ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.32),
-                  child: SingleChildScrollView(
-                    child: Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: missing.map((item) => Container(
-                        constraints: const BoxConstraints(maxWidth: 220),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: colors.surfaceAlt,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: colors.border),
-                        ),
-                        child: Text(item, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.textPrimary)),
-                      )).toList(),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: missing.map((item) => Container(
+                    constraints: const BoxConstraints(maxWidth: 220),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: colors.surfaceAlt,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: colors.border),
                     ),
-                  ),
+                    child: Text(item, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.textPrimary)),
+                  )).toList(),
                 ),
                 const SizedBox(height: 20),
               ],
               SizedBox(
                 width: double.infinity,
-                height: 44,
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(ctx),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.brand,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: const Text('Done', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
