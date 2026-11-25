@@ -70,13 +70,17 @@ class HybridAiBadge extends StatelessWidget {
               color: primaryColor,
             ),
             const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: primaryColor,
-                letterSpacing: 0.1,
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: primaryColor,
+                  letterSpacing: 0.1,
+                ),
               ),
             ),
           ],

@@ -285,6 +285,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                 children: [
                   Text(
                     entry.recipeTitle,
+                    maxLines: 2,
                     style: AppTextStyles.bodyLarge.copyWith(
                       color: colors.textPrimary,
                       fontWeight: FontWeight.w600,
@@ -799,10 +800,19 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                   Expanded(
                     child: Text('Your Weekly Plan', style: AppTextStyles.heading2.copyWith(color: colors.textPrimary)),
                   ),
+                  const SizedBox(width: 8),
                   Consumer<ModelManager>(
-                    builder: (_, mm, __) => HybridAiBadge(
-                      isOnDevice: mm.isLatestOnDevice,
+                    builder: (_, mm, __) => Flexible(
+                      child: HybridAiBadge(
+                        isOnDevice: mm.isLatestOnDevice,
+                        modelName: 'Gemini Flash',
+                      ),
                     ),
+                  ),
+                  IconButton(
+                    tooltip: 'Close plan',
+                    icon: Icon(Icons.close, color: colors.textSecondary),
+                    onPressed: () => Navigator.pop(ctx),
                   ),
                 ],
               ),
@@ -1023,18 +1033,24 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
               if (missing.isNotEmpty) ...[
                 Text('Added Items:', style: AppTextStyles.labelMedium.copyWith(color: colors.textTertiary)),
                 const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: missing.map((item) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: colors.surfaceAlt,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: colors.border),
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.32),
+                  child: SingleChildScrollView(
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: missing.map((item) => Container(
+                        constraints: const BoxConstraints(maxWidth: 220),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: colors.surfaceAlt,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: colors.border),
+                        ),
+                        child: Text(item, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.textPrimary)),
+                      )).toList(),
                     ),
-                    child: Text(item, style: TextStyle(fontSize: 12, color: colors.textPrimary)),
-                  )).toList(),
+                  ),
                 ),
                 const SizedBox(height: 20),
               ],

@@ -58,7 +58,14 @@ class ModelManager extends ChangeNotifier {
   /// Primary Route: Firebase AI Logic Hybrid Inference (On-Device Gemini Nano + Cloud Fallback)
   Future<String?> generateResponse(String prompt, {List<ChatMessage> history = const []}) async {
     try {
-      final hybridResult = await HybridAiService.instance.generateContent(prompt: prompt);
+      final context = history
+          .where((message) => message.type != MessageType.system)
+          .map((message) => '${message.type == MessageType.user ? 'User' : 'ChowGenie'}: ${message.content}')
+          .join('\n');
+      final contextualPrompt = context.isEmpty
+          ? prompt
+          : 'Conversation context:\n$context\n\nCurrent user message:\n$prompt';
+      final hybridResult = await HybridAiService.instance.generateContent(prompt: contextualPrompt);
       _latestExecutionMode = hybridResult.executionMode;
       _latestLatencyMs = hybridResult.latencyMs;
       _latestModelName = hybridResult.model;
@@ -88,8 +95,15 @@ class ModelManager extends ChangeNotifier {
     }
 
     try {
+      final context = history
+          .where((message) => message.type != MessageType.system)
+          .map((message) => '${message.type == MessageType.user ? 'User' : 'ChowGenie'}: ${message.content}')
+          .join('\n');
+      final contextualPrompt = context.isEmpty
+          ? prompt
+          : 'Conversation context:\n$context\n\nCurrent user message:\n$prompt';
       final hybridResult = await HybridAiService.instance.generateContent(
-        prompt: prompt,
+        prompt: contextualPrompt,
         imageBytes: singleBytes,
         multipleImageBytes: multiBytes,
       );

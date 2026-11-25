@@ -80,6 +80,28 @@ class LocalDbService {
     final prefs = await SharedPreferences.getInstance();
     final key = 'smf_weekly_plan_${weekStart.toIso8601String().substring(0, 10)}';
     await prefs.setString(key, plan);
+
+    final mealCount = RegExp(r'^\s*[-*]\s*(Breakfast|Lunch|Dinner|Snack)\s*:', multiLine: true, caseSensitive: false)
+        .allMatches(plan).length;
+    final history = prefs.getStringList('smf_weekly_plan_history') ?? <String>[];
+    final record = '${weekStart.toIso8601String().substring(0, 10)}|${weekStart.add(const Duration(days: 6)).toIso8601String().substring(0, 10)}|$mealCount|${DateTime.now().toIso8601String()}';
+    history.removeWhere((item) => item.startsWith('${weekStart.toIso8601String().substring(0, 10)}|'));
+    history.insert(0, record);
+    await prefs.setStringList('smf_weekly_plan_history', history);
+  }
+
+  Future<List<Map<String, dynamic>>> getWeeklyPlanHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final records = prefs.getStringList('smf_weekly_plan_history') ?? <String>[];
+    return records.map((record) {
+      final parts = record.split('|');
+      return <String, dynamic>{
+        'weekStart': parts.isNotEmpty ? parts[0] : '',
+        'weekEnd': parts.length > 1 ? parts[1] : '',
+        'mealCount': parts.length > 2 ? int.tryParse(parts[2]) ?? 0 : 0,
+        'createdAt': parts.length > 3 ? parts[3] : '',
+      };
+    }).toList();
   }
 
   Future<String?> getGeneratedWeeklyPlan(DateTime weekStart) async {
