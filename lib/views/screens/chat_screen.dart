@@ -24,13 +24,16 @@ class _ChatScreenState extends State<ChatScreen> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   bool _showScrollBtn = false;
+  int _lastMessageCount = 0;
+  String? _lastSessionId;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(() {
-      final show = _scrollController.hasClients &&
-          _scrollController.position.pixels < _scrollController.position.maxScrollExtent - 200;
+      if (!_scrollController.hasClients) return;
+      final show = _scrollController.position.pixels <
+          _scrollController.position.maxScrollExtent - 200;
       if (show != _showScrollBtn) setState(() => _showScrollBtn = show);
     });
     _controller.addListener(_onTextChanged);
@@ -48,13 +51,18 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
-  void _scrollToBottom() {
+  void _scrollToBottom({bool animate = true}) {
     if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-      );
+      final target = _scrollController.position.maxScrollExtent;
+      if (animate) {
+        _scrollController.animateTo(
+          target,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+        );
+      } else {
+        _scrollController.jumpTo(target);
+      }
     }
   }
 
@@ -243,7 +251,25 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       ),
       body: Consumer<ChatViewModel>(builder: (context, vm, _) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+        final currentSessionId = vm.currentSession?.id ?? 'no_session';
+        final sessionChanged = currentSessionId != _lastSessionId;
+        final countChanged = vm.messages.length != _lastMessageCount;
+
+        if (sessionChanged) {
+          _lastSessionId = currentSessionId;
+          _lastMessageCount = vm.messages.length;
+          if (vm.messages.isNotEmpty) {
+            WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom(animate: false));
+          }
+        } else if (countChanged) {
+          final wasNearBottom = !_showScrollBtn;
+          final countIncreased = vm.messages.length > _lastMessageCount;
+          _lastMessageCount = vm.messages.length;
+          if (countIncreased && wasNearBottom) {
+            WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom(animate: true));
+          }
+        }
+
         return Stack(
           children: [
             Column(
@@ -253,6 +279,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       ? _emptyState(vm, colors)
                       : ListView.builder(
                           controller: _scrollController,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                           itemCount: vm.messages.length,
                           itemBuilder: (context, i) => _messageBubble(vm.messages[i], i, vm.messages, colors),
@@ -266,7 +294,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 right: 20,
                 bottom: 80,
                 child: GestureDetector(
-                  onTap: _scrollToBottom,
+                  onTap: () => _scrollToBottom(animate: true),
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -547,8 +575,8 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
     _controller.clear();
+    _scrollToBottom(animate: true);
     vm.sendMessage(text);
-    _scrollToBottom();
   }
 
   void _showImageSourceSheet() {
@@ -589,6 +617,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         if (path != null) {
                           final text = _controller.text.trim();
                           _controller.clear();
+                          _scrollToBottom(animate: true);
                           await vm.sendMultimodalMessage(
                             text.isEmpty ? 'Analyze this food image.' : text,
                             path,
@@ -609,6 +638,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         if (path != null) {
                           final text = _controller.text.trim();
                           _controller.clear();
+                          _scrollToBottom(animate: true);
                           await vm.sendMultimodalMessage(
                             text.isEmpty ? 'Analyze this food image.' : text,
                             path,
