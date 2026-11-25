@@ -210,7 +210,8 @@ Make all meals creative, balanced, delicious, and strictly aligned with user pre
 
   /// Feature 4: Smart Missing-Item Shopping List
   /// Scans all scheduled meals in the current week, cross-checks against pantry stock,
-  /// and automatically adds missing ingredients to the shopping list.
+  /// and utilizes Hybrid AI (Gemini Nano / Gemini Flash) to generate clean, consolidated
+  /// grocery shopping list items (excluding pantry inventory).
   Future<Map<String, dynamic>> generateSmartShoppingList() async {
     _isLoading = true;
     notifyListeners();
@@ -219,54 +220,153 @@ Make all meals creative, balanced, delicious, and strictly aligned with user pre
       final pantryItems = await _db.getPantryItems();
       final pantryNames = pantryItems.map((p) => p.name.toLowerCase().trim()).toList();
 
-      final allIngredients = <String>[];
-      for (final entry in _entries) {
-        Recipe? recipe;
-        if (entry.recipeId.isNotEmpty) {
-          recipe = await _db.getRecipe(entry.recipeId);
-        }
-        if (recipe != null && recipe.ingredients.isNotEmpty) {
-          allIngredients.addAll(recipe.ingredients);
-        } else {
-          // Fallback: smart culinary ingredient extraction from recipe title
-          final extracted = _extractIngredientsFromTitle(entry.recipeTitle);
-          allIngredients.addAll(extracted);
+      final List<String> missingItems = [];
+      int pantryCount = 0;
+
+      // Prepare meal summaries and pantry descriptions
+      final mealsDescription = _entries.map((e) =>
+        '- ${e.mealType.name.toUpperCase()} (${e.date.toIso8601String().split('T')[0]}): ${e.recipeTitle}'
+      ).join('\n');
+      final pantryDescription = pantryItems.isEmpty ? 'Pantry is currently empty' : pantryItems.map((p) => p.name).join(', ');
+
+      // 1. Hybrid AI Analysis (Gemini Nano on-device / Gemini Flash cloud fallback)
+      bool aiSucceeded = false;
+      if (_entries.isNotEmpty) {
+        final aiPrompt = '''You are ChowGenie, an expert AI grocery planning and culinary assistant.
+Analyze these planned meals for the week and the user's pantry inventory to generate a clean, practical grocery shopping list.
+
+PLANNED MEALS FOR THE WEEK:
+$mealsDescription
+
+CURRENT PANTRY INVENTORY (DO NOT BUY THESE IF ALREADY OWNED):
+$pantryDescription
+
+STRICT RULES:
+1. Identify all core culinary ingredients needed to cook these planned meals.
+2. Standardize every ingredient into clean, concise grocery store product names:
+   - Convert "a small wedge of sharp cheddar cheese" -> "Sharp Cheddar Cheese"
+   - Convert "a ripe pear" -> "Pears"
+   - Convert "a drizzle of zucchini" -> "Zucchini"
+   - Convert "a drizzle of extra virgin olive oil" -> "Olive Oil"
+   - Convert "1.5 lbs boneless skinless chicken breast" -> "Chicken Breast"
+3. DO NOT include any item that the user already has in their pantry inventory.
+4. Consolidate duplicates so each grocery item appears once with standard grocery naming.
+5. Return ONLY a valid JSON object strictly matching this schema:
+{
+  "pantryFoundCount": 2,
+  "missingItems": [
+    {"name": "Sharp Cheddar Cheese", "quantity": 1, "unit": "pack"},
+    {"name": "Pears", "quantity": 3, "unit": "pieces"},
+    {"name": "Zucchini", "quantity": 2, "unit": "pieces"}
+  ]
+}
+Do not write markdown fences, conversational notes, or preamble. Output valid JSON only.''';
+
+        try {
+          final aiResponse = await _modelManager.generateResponse(aiPrompt);
+          if (aiResponse != null && aiResponse.isNotEmpty) {
+            String cleaned = aiResponse.trim();
+            if (cleaned.startsWith('```')) {
+              final lines = cleaned.split('\n');
+              if (lines.isNotEmpty && lines.first.startsWith('```')) lines.removeAt(0);
+              if (lines.isNotEmpty && lines.last.startsWith('```')) lines.removeLast();
+              cleaned = lines.join('\n').trim();
+            }
+
+            final jsonStart = cleaned.indexOf('{');
+            final jsonEnd = cleaned.lastIndexOf('}');
+            if (jsonStart != -1 && jsonEnd != -1) {
+              cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
+            }
+
+            final data = jsonDecode(cleaned) as Map<String, dynamic>;
+            pantryCount = (data['pantryFoundCount'] as num?)?.toInt() ?? 0;
+            final rawMissing = data['missingItems'] as List? ?? [];
+
+            for (final item in rawMissing) {
+              String name = '';
+              double qty = 1.0;
+              String unit = 'unit';
+
+              if (item is Map) {
+                name = item['name']?.toString().trim() ?? '';
+                qty = (item['quantity'] as num?)?.toDouble() ?? 1.0;
+                unit = item['unit']?.toString().trim() ?? 'unit';
+              } else if (item is String) {
+                name = item.trim();
+              }
+
+              final normalized = _normalizeGroceryItem(name);
+              if (normalized.isNotEmpty && !missingItems.contains(normalized)) {
+                missingItems.add(normalized);
+                final shoppingItem = ShoppingItem(
+                  id: _uuid.v4(),
+                  name: normalized,
+                  quantity: qty,
+                  unit: unit,
+                  source: ShoppingItemSource.mealPlan,
+                  createdAt: DateTime.now(),
+                );
+                await _db.insertShoppingItem(shoppingItem);
+              }
+            }
+
+            if (missingItems.isNotEmpty) {
+              aiSucceeded = true;
+            }
+          }
+        } catch (aiError) {
+          if (kDebugMode) {
+            print('[MealPlanViewModel] AI grocery generation fallback: $aiError');
+          }
         }
       }
 
-      final List<String> missingItems = [];
-      final List<String> inPantryItems = [];
-
-      for (final ing in allIngredients) {
-        final clean = ing
-            .replaceAll(RegExp(r'^\d+(\/\d+|\.\d+)?\s*(cups?|tbsp|tsp|g|kg|ml|oz|lb|cloves?|pinches?|pinch|cans?|pack|pieces?|bunch)?\s*(of\s*)?', caseSensitive: false), '')
-            .replaceAll(RegExp(r'[\*\-•]'), '')
-            .trim();
-
-        if (clean.isEmpty) continue;
-        final cleanLower = clean.toLowerCase();
-
-        final existsInPantry = pantryNames.any((p) =>
-            p.contains(cleanLower) ||
-            cleanLower.contains(p) ||
-            (cleanLower.length > 3 && p.split(' ').any((word) => word.length > 2 && cleanLower.contains(word))));
-
-        if (existsInPantry) {
-          if (!inPantryItems.contains(clean)) inPantryItems.add(clean);
-        } else {
-          if (!missingItems.contains(clean)) {
-            missingItems.add(clean);
-            final shoppingItem = ShoppingItem(
-              id: _uuid.v4(),
-              name: clean,
-              quantity: 1,
-              unit: 'unit',
-              source: ShoppingItemSource.mealPlan,
-              createdAt: DateTime.now(),
-            );
-            await _db.insertShoppingItem(shoppingItem);
+      // 2. Offline / Heuristic Fallback with smart culinary cleaning
+      if (!aiSucceeded) {
+        final allIngredients = <String>[];
+        for (final entry in _entries) {
+          Recipe? recipe;
+          if (entry.recipeId.isNotEmpty) {
+            recipe = await _db.getRecipe(entry.recipeId);
+          }
+          if (recipe != null && recipe.ingredients.isNotEmpty) {
+            allIngredients.addAll(recipe.ingredients);
+          } else {
+            final extracted = _extractIngredientsFromTitle(entry.recipeTitle);
+            allIngredients.addAll(extracted);
           }
         }
+
+        final List<String> inPantryItems = [];
+        for (final ing in allIngredients) {
+          final clean = _normalizeGroceryItem(ing);
+          if (clean.isEmpty) continue;
+          final cleanLower = clean.toLowerCase();
+
+          final existsInPantry = pantryNames.any((p) =>
+              p.contains(cleanLower) ||
+              cleanLower.contains(p) ||
+              (cleanLower.length > 3 && p.split(' ').any((word) => word.length > 2 && cleanLower.contains(word))));
+
+          if (existsInPantry) {
+            if (!inPantryItems.contains(clean)) inPantryItems.add(clean);
+          } else {
+            if (!missingItems.contains(clean)) {
+              missingItems.add(clean);
+              final shoppingItem = ShoppingItem(
+                id: _uuid.v4(),
+                name: clean,
+                quantity: 1,
+                unit: 'unit',
+                source: ShoppingItemSource.mealPlan,
+                createdAt: DateTime.now(),
+              );
+              await _db.insertShoppingItem(shoppingItem);
+            }
+          }
+        }
+        pantryCount = inPantryItems.length;
       }
 
       _isLoading = false;
@@ -274,7 +374,7 @@ Make all meals creative, balanced, delicious, and strictly aligned with user pre
 
       return {
         'mealCount': _entries.length,
-        'pantryCount': inPantryItems.length,
+        'pantryCount': pantryCount,
         'missingAdded': missingItems,
       };
     } catch (e) {
@@ -287,6 +387,18 @@ Make all meals creative, balanced, delicious, and strictly aligned with user pre
         'error': e.toString(),
       };
     }
+  }
+
+  String _normalizeGroceryItem(String raw) {
+    String clean = raw
+        .replaceAll(RegExp(r'^\d+(\/\d+|\.\d+)?\s*(cups?|tbsp|tsp|tablespoons?|teaspoons?|g|kg|ml|oz|ounces?|lbs?|pounds?|cloves?|pinches?|pinch|cans?|pack|pieces?|bunch|slices?|stalks?|sprigs?)?\s*(of\s*)?', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\b(a small wedge of|a wedge of|a drizzle of|a pinch of|a handful of|a ripe|freshly chopped|chopped|diced|minced|sliced|grated|peeled|cooked|warm|cold|raw|organic|fresh|extra virgin)\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'[\*\-•\(\)\[\]]'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+
+    if (clean.isEmpty || clean.length < 2) return '';
+    return clean.split(' ').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}' : '').join(' ').trim();
   }
 
   List<String> _extractIngredientsFromTitle(String title) {

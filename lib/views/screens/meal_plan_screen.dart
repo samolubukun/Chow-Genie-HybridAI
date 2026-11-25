@@ -23,6 +23,8 @@ class MealPlanScreen extends StatefulWidget {
 class _MealPlanScreenState extends State<MealPlanScreen> {
   late PageController _pageController;
   int _currentPage = 0;
+  DateTime? _selectedDate;
+  bool _showAllWeek = false;
 
   @override
   void initState() {
@@ -72,6 +74,19 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
       backgroundColor: colors.scaffold,
       body: Consumer<MealPlanViewModel>(
         builder: (context, vm, _) {
+          final weekStart = vm.currentWeekStart;
+          final today = DateTime.now();
+          final activeDate = _selectedDate ?? (
+            (today.isAfter(weekStart.subtract(const Duration(days: 1))) && today.isBefore(weekStart.add(const Duration(days: 7))))
+                ? DateTime(today.year, today.month, today.day)
+                : weekStart
+          );
+
+          final activeDayEntries = vm.entries
+              .where((e) => e.date.year == activeDate.year && e.date.month == activeDate.month && e.date.day == activeDate.day)
+              .toList();
+          final isToday = activeDate.year == today.year && activeDate.month == today.month && activeDate.day == today.day;
+
           return CustomScrollView(
             slivers: [
               SliverAppBar(
@@ -82,7 +97,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                 centerTitle: true,
               ),
               SliverToBoxAdapter(child: _buildWeekNavigator(context, vm, colors)),
-              SliverToBoxAdapter(child: _buildDayTabs(context, vm, colors)),
+              SliverToBoxAdapter(child: _buildDayTabs(context, vm, colors, activeDate)),
               if (vm.entries.isNotEmpty)
                 SliverToBoxAdapter(child: _buildSmartShoppingBanner(context, vm, colors)),
               if (vm.entries.isEmpty && !vm.isLoading)
@@ -90,21 +105,95 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                   hasScrollBody: false,
                   child: _buildEmptyState(colors, vm),
                 )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.only(left: 16, right: 16, top: 20),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final entry = vm.entries[index];
-                        return _buildMealEntryCard(context, vm, entry, colors);
-                      },
-                      childCount: vm.entries.length,
+              else if (_showAllWeek) ...[
+                // All Week Grouped View
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('All Week Overview', style: AppTextStyles.heading3.copyWith(color: colors.textPrimary)),
+                        TextButton.icon(
+                          onPressed: () => setState(() => _showAllWeek = false),
+                          icon: const Icon(Icons.today_rounded, size: 16),
+                          label: const Text('Day View', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          style: TextButton.styleFrom(foregroundColor: AppColors.brand),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              SliverToBoxAdapter(child: const SizedBox(height: 24)),
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final days = List.generate(7, (i) => weekStart.add(Duration(days: i)));
+                        final d = days[index];
+                        final dayMeals = vm.entries.where((e) => e.date.year == d.year && e.date.month == d.month && e.date.day == d.day).toList();
+                        return _buildGroupedDayCard(context, vm, d, dayMeals, colors);
+                      },
+                      childCount: 7,
+                    ),
+                  ),
+                ),
+              ] else ...[
+                // Selected Day View (Grounded with date, clear slots, no 28-meal endless clutter)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isToday ? 'Today • ${DateFormat('EEEE, MMM d').format(activeDate)}' : DateFormat('EEEE, MMM d').format(activeDate),
+                              style: AppTextStyles.heading3.copyWith(color: colors.textPrimary),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${activeDayEntries.length} meals planned',
+                              style: AppTextStyles.bodySmall.copyWith(color: colors.textSecondary),
+                            ),
+                          ],
+                        ),
+                        TextButton.icon(
+                          onPressed: () => setState(() => _showAllWeek = true),
+                          icon: const Icon(Icons.calendar_view_week_rounded, size: 16),
+                          label: const Text('All Week', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          style: TextButton.styleFrom(foregroundColor: AppColors.brand),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final slots = [MealType.breakfast, MealType.lunch, MealType.dinner, MealType.snack];
+                        final slot = slots[index];
+                        final slotMeals = activeDayEntries.where((e) => e.mealType == slot).toList();
 
+                        if (slotMeals.isNotEmpty) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: slotMeals.map((m) => _buildMealEntryCard(context, vm, m, colors)).toList(),
+                          );
+                        } else {
+                          return _buildEmptySlotCard(context, vm, slot, activeDate, colors);
+                        }
+                      },
+                      childCount: 4,
+                    ),
+                  ),
+                ),
+              ],
+              SliverToBoxAdapter(child: const SizedBox(height: 24)),
             ],
           );
         },
@@ -155,13 +244,11 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
     return ((days + firstOfYear.weekday - 1) / 7).ceil();
   }
 
-  Widget _buildDayTabs(BuildContext context, MealPlanViewModel vm, AppColorSet colors) {
+  Widget _buildDayTabs(BuildContext context, MealPlanViewModel vm, AppColorSet colors, DateTime activeDate) {
     final weekStart = vm.currentWeekStart;
     final days = List.generate(7, (i) => weekStart.add(Duration(days: i)));
     final dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     final today = DateTime.now();
-    final isCurrentWeek = today.isAfter(weekStart.subtract(const Duration(days: 1))) &&
-        today.isBefore(weekStart.add(const Duration(days: 7)));
 
     return SizedBox(
       height: 88,
@@ -171,22 +258,31 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
         itemCount: 7,
         itemBuilder: (context, index) {
           final date = days[index];
-          final isToday = isCurrentWeek && date.day == today.day && date.month == today.month;
+          final isSelected = date.year == activeDate.year && date.month == activeDate.month && date.day == activeDate.day;
+          final isToday = date.year == today.year && date.month == today.month && date.day == today.day;
           final dayEntries = vm.entries
               .where((e) => e.date.year == date.year && e.date.month == date.month && e.date.day == date.day)
               .toList();
 
           return GestureDetector(
-            onTap: () => _showDayDetail(context, vm, date, colors),
+            onTap: () {
+              setState(() {
+                _selectedDate = date;
+                _showAllWeek = false;
+              });
+            },
             child: Container(
               width: 76,
               margin: const EdgeInsets.symmetric(horizontal: 4),
               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
               decoration: BoxDecoration(
-                color: isToday ? AppColors.brand : colors.card,
+                color: isSelected ? AppColors.brand : colors.card,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: isToday ? AppColors.brand : colors.border,
+                  color: isSelected
+                      ? AppColors.brand
+                      : (isToday ? AppColors.brand.withValues(alpha: 0.6) : colors.border),
+                  width: isToday && !isSelected ? 1.5 : 1,
                 ),
               ),
               child: Column(
@@ -195,7 +291,8 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                   Text(
                     dayNames[index],
                     style: AppTextStyles.labelSmall.copyWith(
-                      color: isToday ? Colors.white : colors.textSecondary,
+                      color: isSelected ? Colors.white : (isToday ? AppColors.brand : colors.textSecondary),
+                      fontWeight: isSelected || isToday ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -203,7 +300,8 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                     '${date.day}',
                     style: AppTextStyles.numericSmall.copyWith(
                       fontSize: 16,
-                      color: isToday ? Colors.white : colors.textPrimary,
+                      color: isSelected ? Colors.white : colors.textPrimary,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -216,14 +314,17 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                           height: 6,
                           margin: const EdgeInsets.only(right: 2),
                           decoration: BoxDecoration(
-                            color: _mealColor(e.mealType),
+                            color: isSelected ? Colors.white.withValues(alpha: 0.8) : _mealColor(e.mealType),
                             shape: BoxShape.circle,
                           ),
                         )),
                         if (dayEntries.length > 3)
                           Text(
                             '+${dayEntries.length - 3}',
-                            style: AppTextStyles.labelSmall.copyWith(fontSize: 8, color: colors.textTertiary),
+                            style: AppTextStyles.labelSmall.copyWith(
+                              fontSize: 8,
+                              color: isSelected ? Colors.white : colors.textTertiary,
+                            ),
                           ),
                       ],
                     ),
@@ -232,6 +333,94 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildEmptySlotCard(
+    BuildContext context,
+    MealPlanViewModel vm,
+    MealType slot,
+    DateTime date,
+    AppColorSet colors,
+  ) {
+    final slotName = slot.name[0].toUpperCase() + slot.name.substring(1);
+    return InkWell(
+      onTap: () => _showAddMealSheet(context, vm, slot, date, colors),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: colors.card.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.border.withValues(alpha: 0.6)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: _mealColor(slot).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: Text(_mealIcon(slot), style: const TextStyle(fontSize: 16)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(slotName, style: AppTextStyles.labelMedium.copyWith(color: colors.textPrimary)),
+                  Text('No meal scheduled for $slotName', style: AppTextStyles.bodySmall.copyWith(color: colors.textTertiary)),
+                ],
+              ),
+            ),
+            const Icon(Icons.add_circle_outline_rounded, color: AppColors.brand, size: 22),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGroupedDayCard(
+    BuildContext context,
+    MealPlanViewModel vm,
+    DateTime date,
+    List<MealPlanEntry> dayMeals,
+    AppColorSet colors,
+  ) {
+    final dayName = DateFormat('EEEE, MMM d').format(date);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(dayName, style: AppTextStyles.labelLarge.copyWith(color: colors.textPrimary, fontWeight: FontWeight.bold)),
+              Text('${dayMeals.length} meals', style: AppTextStyles.bodySmall.copyWith(color: AppColors.brand, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (dayMeals.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text('No meals scheduled', style: AppTextStyles.bodySmall.copyWith(color: colors.textTertiary)),
+            )
+          else
+            ...dayMeals.map((m) => _buildMealEntryCard(context, vm, m, colors)),
+        ],
       ),
     );
   }
