@@ -19,8 +19,31 @@ ChowGenie is an AI-powered kitchen companion app built with Flutter that helps y
   <img src="https://img.shields.io/badge/Flutter-3.24%2B-02569B?style=for-the-badge&logo=flutter" alt="Flutter" />
   <img src="https://img.shields.io/badge/Platform-Android%20%7C%20Web-3DDC84?style=for-the-badge&logo=android" alt="Android & Web" />
   <a href="https://github.com/samolubukun/Chow-Genie-HybridAI/releases/download/v2.0.0/app-arm64-v8a-release.apk"><img src="https://img.shields.io/badge/Download_APK-Android_(arm64)-E65100?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" /></a>
+  <a href="https://youtu.be/87PdNe_900s"><img src="https://img.shields.io/badge/Watch_Demo-YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch Demo on YouTube" /></a>
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License" />
 </p>
+
+---
+
+## Video Demo & Product Walkthrough
+
+[![ChowGenie Demo Video](screenshots/00_chowgenie_thumbnail.jpg)](https://youtu.be/87PdNe_900s)
+
+> **Watch Full Walkthrough on YouTube:** [https://youtu.be/87PdNe_900s](https://youtu.be/87PdNe_900s) (2m 53s)
+
+---
+
+## App Screenshots & Visual Tour
+
+| Screen | Screen |
+| :---: | :---: |
+| <img src="screenshots/01_home_dashboard.png" width="360" /><br>**Home Dashboard**<br>Daily calories, water & macros summary | <img src="screenshots/02_ask_genie_text.png" width="360" /><br>**Ask Genie (Text-to-Recipe)**<br>Generate recipes from pantry ingredients |
+| <img src="screenshots/03_ask_genie_photo.png" width="360" /><br>**Ask Genie (Photo-to-Recipe)**<br>Multimodal food recognition & breakdown | <img src="screenshots/04_recipes_library.png" width="360" /><br>**Offline Recipe Library**<br>73,000+ recipes searchable offline |
+| <img src="screenshots/05_ai_chat_multimodal.png" width="360" /><br>**Multimodal AI Chat**<br>Multi-image food Q&A with conversational memory | <img src="screenshots/06_ingrediguard_scan.png" width="360" /><br>**IngrediGuard Label Scanner**<br>Safety score, NOVA 4 & seed oil alerts |
+| <img src="screenshots/07_meal_planner.png" width="360" /><br>**Smart Meal Planner**<br>Active day slots & AI slot generation | <img src="screenshots/08_nutrition_tracker.png" width="360" /><br>**Nutrition & Macro Tracker**<br>Calorie rings, water tracker & photo logging |
+| <img src="screenshots/09_diet_plan_generator.png" width="360" /><br>**Personalized 7-Day Diet Plan**<br>29-meal schedule based on biometrics | <img src="screenshots/10_smart_grocery_sync.png" width="360" /><br>**Smart Grocery List Sync**<br>Auto pantry cross-check & missing items list |
+| <img src="screenshots/11_pantry_receipt_ocr.png" width="360" /><br>**Pantry Receipt OCR**<br>Camera receipt scan auto-extracting items | <img src="screenshots/12_one_tap_transforms.png" width="360" /><br>**One-Tap Recipe Transforms**<br>On-device Gemini Nano Budget Swap & Vegan |
+| <img src="screenshots/13_qr_share.png" width="360" /><br>**Offline QR Recipe Share**<br>Peer-to-peer recipe export without internet | <img src="screenshots/14_local_mesh.png" width="360" /><br>**Wi-Fi Local Mesh Lounge**<br>Offline discovery & recipe exchange |
 
 ---
 
