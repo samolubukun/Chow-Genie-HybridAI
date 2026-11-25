@@ -143,28 +143,61 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              isToday ? 'Today • ${DateFormat('EEEE, MMM d').format(activeDate)}' : DateFormat('EEEE, MMM d').format(activeDate),
-                              style: AppTextStyles.heading3.copyWith(color: colors.textPrimary),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isToday ? 'Today • ${DateFormat('EEEE, MMM d').format(activeDate)}' : DateFormat('EEEE, MMM d').format(activeDate),
+                                  style: AppTextStyles.heading3.copyWith(color: colors.textPrimary),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${activeDayEntries.length} of 4 meals planned',
+                                  style: AppTextStyles.bodySmall.copyWith(color: colors.textSecondary),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${activeDayEntries.length} meals planned',
-                              style: AppTextStyles.bodySmall.copyWith(color: colors.textSecondary),
+                            TextButton.icon(
+                              onPressed: () => setState(() => _showAllWeek = true),
+                              icon: const Icon(Icons.calendar_view_week_rounded, size: 16),
+                              label: const Text('All Week', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                              style: TextButton.styleFrom(foregroundColor: AppColors.brand),
                             ),
                           ],
                         ),
-                        TextButton.icon(
-                          onPressed: () => setState(() => _showAllWeek = true),
-                          icon: const Icon(Icons.calendar_view_week_rounded, size: 16),
-                          label: const Text('All Week', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          style: TextButton.styleFrom(foregroundColor: AppColors.brand),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: vm.isLoading ? null : () => _handleGenerateDayWithAi(context, vm, activeDate),
+                                icon: const Icon(Icons.auto_awesome, size: 16, color: AppColors.brand),
+                                label: const Text('Plan Day with AI', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.brand)),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                                  side: BorderSide(color: AppColors.brand.withValues(alpha: 0.5)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            OutlinedButton.icon(
+                              onPressed: () => _showDayDetail(context, vm, activeDate, colors),
+                              icon: const Icon(Icons.view_agenda_outlined, size: 16, color: AppColors.accent),
+                              label: const Text('Manage Day', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.accent)),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                                side: BorderSide(color: AppColors.accent.withValues(alpha: 0.5)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -451,12 +484,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
           border: Border.all(color: colors.border),
         ),
         child: InkWell(
-          onTap: () async {
-            final recipe = await LocalDbService.instance.getRecipe(entry.recipeId);
-            if (recipe != null && context.mounted) {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => RecipeDetailScreen(recipe: recipe)));
-            }
-          },
+          onTap: () => _showMealOptionsSheet(context, vm, entry, colors),
           child: Row(
             children: [
             Container(
@@ -508,7 +536,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            Icon(Icons.drag_handle, color: colors.textTertiary, size: 20),
+            Icon(Icons.more_vert_rounded, color: colors.textTertiary, size: 20),
           ],
         ),
       ),
@@ -806,6 +834,15 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                             style: AppTextStyles.bodySmall.copyWith(color: colors.textSecondary),
                           ),
                           onTap: () async {
+                            final existing = vm.entries.where((e) =>
+                                e.date.year == date.year &&
+                                e.date.month == date.month &&
+                                e.date.day == date.day &&
+                                e.mealType == type).toList();
+                            for (final ex in existing) {
+                              await vm.removeEntry(ex.id);
+                            }
+
                             final entry = MealPlanEntry(
                               id: DateTime.now().microsecondsSinceEpoch.toString(),
                               recipeId: recipe.id,
@@ -888,6 +925,15 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
               );
 
               final profile = await LocalDbService.instance.getProfile();
+              final existing = vm.entries.where((e) =>
+                  e.date.year == date.year &&
+                  e.date.month == date.month &&
+                  e.date.day == date.day &&
+                  e.mealType == type).toList();
+              for (final ex in existing) {
+                await vm.removeEntry(ex.id);
+              }
+
               final entry = await vm.suggestAndAddMealForSlot(
                 type: type,
                 date: date,
@@ -929,6 +975,171 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
             child: const Text('Generate'),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _handleGenerateDayWithAi(BuildContext context, MealPlanViewModel vm, DateTime date) async {
+    final colors = AppColors.of(context);
+    final dayName = DateFormat('EEEE, MMM d').format(date);
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: colors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.auto_awesome, color: AppColors.brand, size: 22),
+            const SizedBox(width: 10),
+            Expanded(child: Text('Plan $dayName', style: AppTextStyles.heading3)),
+          ],
+        ),
+        content: Text(
+          'ChowGenie Hybrid AI will generate a complete 4-slot day plan (Breakfast, Lunch, Dinner, Snack) tailored to your dietary goals.\n\nAny existing meals for this day will be refreshed.',
+          style: AppTextStyles.bodyMedium.copyWith(color: colors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: TextStyle(color: colors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.brand,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Generate Day Plan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Text('Generating full day plan for $dayName with Hybrid AI...')),
+          ],
+        ),
+        duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    final profile = await LocalDbService.instance.getProfile();
+    final results = await vm.generateMealsForDay(date, profile: profile);
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      if (results.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: AppColors.brand, size: 18),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Generated ${results.length} meals for $dayName!')),
+              ],
+            ),
+            backgroundColor: colors.surfaceAlt,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showMealOptionsSheet(BuildContext context, MealPlanViewModel vm, MealPlanEntry entry, AppColorSet colors) {
+    final mealColor = _mealColor(entry.mealType);
+    final slotName = entry.mealType.name[0].toUpperCase() + entry.mealType.name.substring(1);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(color: colors.border, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Text(_mealIcon(entry.mealType), style: const TextStyle(fontSize: 22)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(slotName.toUpperCase(), style: AppTextStyles.labelSmall.copyWith(color: mealColor, fontWeight: FontWeight.bold)),
+                        Text(entry.recipeTitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTextStyles.heading3.copyWith(color: colors.textPrimary)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.restaurant_menu_rounded, color: AppColors.brand),
+                title: const Text('View Recipe Details'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final recipe = await LocalDbService.instance.getRecipe(entry.recipeId);
+                  if (recipe != null && context.mounted) {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => RecipeDetailScreen(recipe: recipe)));
+                  } else if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Recipe details for "${entry.recipeTitle}"')));
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.swap_horiz_rounded, color: AppColors.brand),
+                title: const Text('Swap from 73k Recipe Bank'),
+                subtitle: const Text('Search and replace this slot from your recipe collection'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showAddMealSheet(context, vm, entry.mealType, entry.date, colors);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.auto_awesome, color: AppColors.accent),
+                title: const Text('Re-generate with AI'),
+                subtitle: const Text('Have Hybrid AI generate a brand new recipe for this slot'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showGenerateForSlot(context, vm, entry.mealType, entry.date, colors);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
+                title: const Text('Remove from Day', style: TextStyle(color: AppColors.error)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  vm.removeEntry(entry.id);
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

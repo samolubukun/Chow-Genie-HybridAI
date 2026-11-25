@@ -505,4 +505,117 @@ Do not write markdown code fences or extra text, just raw JSON.
     }
     return null;
   }
+
+  /// Generates a complete 4-slot meal plan (Breakfast, Lunch, Dinner, Snack) for a specific single day using Hybrid AI.
+  Future<List<MealPlanEntry>> generateMealsForDay(DateTime date, {UserProfile? profile}) async {
+    _isLoading = true;
+    notifyListeners();
+
+    final dayName = DateFormat('EEEE').format(date);
+    final results = <MealPlanEntry>[];
+
+    try {
+      final dietPrefs = (profile != null && profile.dietaryPreferences.isNotEmpty)
+          ? 'Dietary preferences: ${profile.dietaryPreferences.join(", ")}.'
+          : '';
+      final calGoal = profile != null
+          ? 'Daily calorie goal: ${profile.dailyCalorieGoal.round()} kcal.'
+          : '';
+      final allergies = (profile != null && profile.allergies.isNotEmpty)
+          ? 'Allergies to strictly avoid: ${profile.allergies.join(", ")}.'
+          : '';
+
+      final prompt = '''You are ChowGenie, an expert AI culinary nutritionist.
+Create a complete, delicious, healthy 1-day meal plan for $dayName with 4 slots: Breakfast, Lunch, Dinner, and Snack.
+$dietPrefs $calGoal $allergies
+
+Return ONLY valid raw JSON with this exact structure:
+{
+  "meals": [
+    {"slot": "breakfast", "title": "Dish Name", "calories": 400, "ingredients": ["item 1", "item 2"], "directions": ["step 1"]},
+    {"slot": "lunch", "title": "Dish Name", "calories": 550, "ingredients": ["item 1", "item 2"], "directions": ["step 1"]},
+    {"slot": "dinner", "title": "Dish Name", "calories": 600, "ingredients": ["item 1", "item 2"], "directions": ["step 1"]},
+    {"slot": "snack", "title": "Dish Name", "calories": 200, "ingredients": ["item 1", "item 2"], "directions": ["step 1"]}
+  ]
+}
+Do not write markdown fences or extra text, just raw JSON.''';
+
+      final response = await _modelManager.generateResponse(prompt);
+      if (response != null && response.isNotEmpty) {
+        String cleaned = response.trim();
+        if (cleaned.startsWith('```')) {
+          final lines = cleaned.split('\n');
+          if (lines.isNotEmpty && lines.first.startsWith('```')) lines.removeAt(0);
+          if (lines.isNotEmpty && lines.last.startsWith('```')) lines.removeLast();
+          cleaned = lines.join('\n').trim();
+        }
+
+        final jsonStart = cleaned.indexOf('{');
+        final jsonEnd = cleaned.lastIndexOf('}');
+        if (jsonStart != -1 && jsonEnd != -1) {
+          cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
+        }
+
+        final data = jsonDecode(cleaned) as Map<String, dynamic>;
+        final mealsList = data['meals'] as List? ?? [];
+
+        for (final m in mealsList) {
+          if (m is Map) {
+            final slotStr = m['slot']?.toString().toLowerCase() ?? 'breakfast';
+            MealType slot = MealType.breakfast;
+            if (slotStr.contains('lunch')) slot = MealType.lunch;
+            else if (slotStr.contains('dinner')) slot = MealType.dinner;
+            else if (slotStr.contains('snack')) slot = MealType.snack;
+
+            final title = m['title']?.toString() ?? 'Daily Meal';
+            final cal = (m['calories'] as num?)?.toDouble() ?? 450.0;
+            final ingredients = (m['ingredients'] as List?)?.map((e) => e.toString()).toList() ?? [];
+            final directions = (m['directions'] as List?)?.map((e) => e.toString()).toList() ?? [];
+
+            final recipeId = 'day_${_uuid.v4()}';
+            final recipe = Recipe(
+              id: recipeId,
+              title: title,
+              ingredients: ingredients,
+              directions: directions,
+              calories: cal,
+              source: 'AI Day Plan',
+              isUserGenerated: true,
+              createdAt: DateTime.now(),
+            );
+            await _db.insertRecipe(recipe);
+
+            final entry = MealPlanEntry(
+              id: _uuid.v4(),
+              recipeId: recipeId,
+              recipeTitle: title,
+              mealType: slot,
+              date: date,
+              estimatedCalories: cal,
+            );
+
+            // Replace existing slot entry
+            final existing = _entries.where((e) =>
+                e.date.year == date.year &&
+                e.date.month == date.month &&
+                e.date.day == date.day &&
+                e.mealType == slot).toList();
+            for (final ex in existing) {
+              await _db.deleteMealPlanEntry(ex.id);
+            }
+
+            await _db.insertMealPlanEntry(entry);
+            results.add(entry);
+          }
+        }
+        await loadWeek(date: date);
+      }
+    } catch (e) {
+      debugPrint('[MealPlanViewModel] generateMealsForDay error: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+    return results;
+  }
 }
