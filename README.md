@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icons/chowgenie_app_icon.png" width="140" alt="ChowGenie App Icon" />
+  <img src="screenshots/chowgenie-banner.jpg" width="100%" alt="ChowGenie Hybrid AI Banner" />
 </p>
 
 <h1 align="center">ChowGenie Hybrid AI</h1>
